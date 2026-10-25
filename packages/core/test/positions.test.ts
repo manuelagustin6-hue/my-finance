@@ -286,6 +286,22 @@ describe('summarizePortfolio', () => {
     ]);
   });
 
+  it('valúa bonos que cotizan cada 100 nominales', () => {
+    const { consolidated } = computePositions(
+      [tx({ type: 'buy', assetId: 'AL30', date: '2025-01-01', quantity: 1000, price: 0.6, fee: 0 })],
+      { baseCurrency: 'USD' },
+    );
+    const quotes = new Map([
+      ['AL30', { assetId: 'AL30', price: 65, previousClose: 64, unit: 100, currency: 'USD', asOf: '2025-06-01' }],
+    ]);
+    const v = valuePosition(consolidated[0]!, { baseCurrency: 'USD', quotes, fx: () => 1 });
+    expect(v.price).toBeCloseTo(0.65);
+    expect(v.quotePrice).toBe(65);
+    expect(v.marketValue).toBeCloseTo(650);
+    expect(v.unrealizedPnl).toBeCloseTo(50);
+    expect(v.dayChangeBase).toBeCloseTo(10);
+  });
+
   it('usa el precio manual y, si no hay, valoriza al costo', () => {
     const { consolidated } = computePositions(
       [

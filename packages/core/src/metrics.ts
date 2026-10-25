@@ -238,7 +238,8 @@ export function portfolioSeries(input: PortfolioSeriesInput): PortfolioPoint[] {
       const history = input.histories.get(assetId);
       const point = history ? pointAtOrBefore(history, date) : undefined;
       if (!point) continue;
-      value += toBase(qty * point.close, input.currencies.get(assetId) ?? input.baseCurrency, date);
+      // Bonos cotizan cada 100 nominales: se pasa a precio por unidad.
+      value += toBase((qty * point.close) / (point.unit ?? 1), input.currencies.get(assetId) ?? input.baseCurrency, date);
     }
 
     // Rendimiento del día excluyendo flujos: (V_t − F_t) / V_{t−1} − 1

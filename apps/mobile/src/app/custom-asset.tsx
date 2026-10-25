@@ -1,6 +1,6 @@
 import { ASSET_TYPES, type AssetType } from '@my-finance/core';
 import { useQueryClient } from '@tanstack/react-query';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Chips, Field, Screen, Text } from '@/components/ui';
@@ -10,6 +10,7 @@ import { CurrencyField } from '@/components/CurrencyPicker';
 import { parseInput } from '@/lib/confirm';
 
 export default function CustomAssetScreen() {
+  const { then } = useLocalSearchParams<{ then?: string }>();
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [symbol, setSymbol] = useState('');
@@ -40,7 +41,8 @@ export default function CustomAssetScreen() {
         manualPrice,
       });
       await qc.invalidateQueries({ queryKey: keys.assets });
-      router.replace({ pathname: '/transaction', params: { assetId: asset.id } });
+      if (then === 'back') router.back();
+      else router.replace({ pathname: '/transaction', params: { assetId: asset.id } });
     } finally {
       setSaving(false);
     }

@@ -8,6 +8,7 @@ import {
   type FxSnapshot,
   type UsdRates,
   canViewHistory,
+  pointAtOrBefore,
   type AssetRef,
   type AssetSearchResult,
   type Feature,
@@ -32,6 +33,8 @@ export interface MarketClient {
   quotes(assets: AssetRef[]): Promise<Quote[]>;
   history(asset: AssetRef, range: HistoryRange): Promise<PricePoint[]>;
   fundamentals(asset: AssetRef): Promise<Fundamentals | null>;
+  /** Precio de cierre en una fecha (o el último anterior), para valuar el saldo inicial. */
+  priceOn(asset: AssetRef, date: string): Promise<PricePoint | null>;
   /** Tipos de cambio actuales contra USD (con el dólar elegido para ARS y VES). */
   fxLatest(prefs: FxPreferences): Promise<FxSnapshot>;
   /** Tipos de cambio contra USD en fechas pasadas. */
@@ -70,6 +73,10 @@ export class LocalMarketClient implements MarketClient {
   fundamentals(asset: AssetRef) {
     if (!hasFeature(this.plan(), 'fundamentals')) return Promise.reject(new ProRequiredError('fundamentals'));
     return this.provider.getFundamentals(asset);
+  }
+
+  async priceOn(asset: AssetRef, date: string) {
+    return pointAtOrBefore(await this.provider.getHistory(asset, 'MAX'), date.slice(0, 10)) ?? null;
   }
 
   fxLatest(prefs: FxPreferences) {
@@ -111,6 +118,10 @@ export class RemoteMarketClient implements MarketClient {
 
   fundamentals(asset: AssetRef) {
     return this.call<Fundamentals | null>({ action: 'fundamentals', asset });
+  }
+
+  priceOn(asset: AssetRef, date: string) {
+    return this.call<PricePoint | null>({ action: 'price_on', asset, date });
   }
 
   fxLatest(prefs: FxPreferences) {

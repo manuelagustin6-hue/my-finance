@@ -143,6 +143,28 @@ function WalletForm({ id, existing }: { id: string; existing?: Wallet }) {
         </>
       )}
 
+      {!isNew && chosen ? (
+        <Section title={t('opening.title')}>
+          <Card style={{ gap: spacing.sm }}>
+            <Text muted>
+              {existing?.openingDate
+                ? t('opening.summary', {
+                    date: f.date(existing.openingDate),
+                    count: portfolio.transactions.filter((tx) => tx.walletId === id && tx.source === 'opening').length,
+                  })
+                : t('opening.walletHelp')}
+            </Text>
+            <Button
+              title={existing?.openingDate ? t('opening.edit') : t('opening.load')}
+              variant="secondary"
+              small
+              icon="flag-outline"
+              onPress={() => router.push({ pathname: '/opening', params: { walletId: id } })}
+            />
+          </Card>
+        </Section>
+      ) : null}
+
       {!isNew && holdings.length > 0 ? (
         <Section title={t('wallets.holdings')}>
           <Card style={{ paddingVertical: spacing.xs }}>

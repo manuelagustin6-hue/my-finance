@@ -17,3 +17,4 @@ export * from './fx/table.ts';
 export * from './fx/public.ts';
 export * from './chart.ts';
 export * from './platforms.ts';
+export * from './opening.ts';

@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { AllocationBar } from '@/components/charts';
 import { CurrencyToggle } from '@/components/CurrencyPicker';
 import { PositionRow } from '@/components/PositionRow';
+import { WarningsCard } from '@/components/WarningsCard';
 import {
   Button,
   Card,
@@ -51,6 +52,7 @@ export default function HomeScreen() {
               <>
                 <Button title={t('home.addTransaction')} icon="add" onPress={() => router.push('/transaction')} />
                 <Button title={t('home.importHistory')} variant="secondary" icon="cloud-upload-outline" onPress={() => router.push('/import')} />
+                <Button title={t('opening.load')} variant="secondary" icon="flag-outline" onPress={() => router.push('/opening')} />
               </>
             )}
           </View>
@@ -98,11 +100,7 @@ export default function HomeScreen() {
         </Text>
       </Card>
 
-      {p.warnings && p.warnings.length > 0 ? (
-        <Card onPress={() => router.push('/transactions')} style={{ padding: 0, borderWidth: 0 }}>
-          <Notice tone="warning" text={t('home.warnings', { count: p.warnings.length })} />
-        </Card>
-      ) : null}
+      {p.warnings && p.warnings.length > 0 ? <WarningsCard warnings={p.warnings} assetsById={p.assetsById} /> : null}
 
       <Row>
         <View style={{ flex: 1 }}>

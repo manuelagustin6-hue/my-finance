@@ -2,6 +2,7 @@
 // Oculta las claves de los proveedores, aplica los límites del plan y cachea cotizaciones.
 import {
   canViewHistory,
+  pointAtOrBefore,
   hasFeature,
   MockMarketDataProvider,
   PublicFxProvider,
@@ -48,7 +49,8 @@ type Body =
   | { action: 'fundamentals'; asset: AssetRef }
   | { action: 'fx_latest'; prefs?: FxPreferences }
   | { action: 'fx_on'; dates: string[]; currencies: string[]; prefs?: FxPreferences }
-  | { action: 'ensure_asset'; asset: AssetRef };
+  | { action: 'ensure_asset'; asset: AssetRef }
+  | { action: 'price_on'; asset: AssetRef; date: string };
 
 async function planOf(userId: string): Promise<PlanId> {
   const { data } = await adminClient().rpc('current_plan', { uid: userId });
@@ -142,6 +144,13 @@ Deno.serve(async (req) => {
 
       case 'fx_on':
         return json(await fx.on((body.dates ?? []).slice(0, MAX_FX_DATES), body.currencies ?? [], body.prefs));
+
+      case 'price_on': {
+        // Precio de un día puntual (para valuar el saldo inicial); disponible en todos los planes.
+        const history = await provider.getHistory(body.asset, 'MAX');
+        const point = pointAtOrBefore(history, String(body.date).slice(0, 10));
+        return json(point ?? null);
+      }
 
       case 'ensure_asset': {
         // Solo el servidor agrega activos al catálogo global, y únicamente si el proveedor los conoce.

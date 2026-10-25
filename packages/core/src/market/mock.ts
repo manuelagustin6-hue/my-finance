@@ -140,6 +140,7 @@ export class MockMarketDataProvider implements MarketDataProvider {
         price: this.priceOn(entry, last),
         previousClose: this.priceOn(entry, prev),
         currency: entry.currency,
+        unit: entry.quoteUnit,
         asOf: last,
       });
     }
@@ -154,7 +155,7 @@ export class MockMarketDataProvider implements MarketDataProvider {
     for (let i = RANGE_DAYS[range]; i >= 0; i--) {
       const date = addDays(today, -i);
       if (!trades24x7(entry) && isWeekend(date)) continue;
-      points.push({ date, close: this.priceOn(entry, date) });
+      points.push(entry.quoteUnit ? { date, close: this.priceOn(entry, date), unit: entry.quoteUnit } : { date, close: this.priceOn(entry, date) });
     }
     return points;
   }

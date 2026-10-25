@@ -224,7 +224,10 @@ export default function AssetScreen() {
             {position ? (
               <StatGrid>
                 <Stat label={t('positions.quantity')} value={f.num(position.quantity)} />
-                <Stat label={t('positions.avgCost')} value={f.money(averageCost(position), currency)} />
+                <Stat
+                  label={position.quoteUnit !== 1 ? `${t('positions.avgCost')} · ${t('tx.perUnits', { unit: position.quoteUnit })}` : t('positions.avgCost')}
+                  value={f.money(averageCost(position) * position.quoteUnit, currency)}
+                />
                 <Stat label={t('positions.value')} value={f.money(position.marketValueBase, base)} />
                 <Stat label={t('home.invested')} value={f.money(position.costBasisBase, base)} />
                 <Stat

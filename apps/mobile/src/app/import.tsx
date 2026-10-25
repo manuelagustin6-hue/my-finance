@@ -3,6 +3,7 @@ import {
   canImport,
   GENERIC_TEMPLATE_EXAMPLE,
   importCsv,
+  isBeforeOpening,
   isSmartResult,
   missingHoldings,
   parseCsv,
@@ -44,6 +45,8 @@ interface Analysis {
   resolutions: Map<string, AssetResolution>;
   fresh: ImportedRow[];
   duplicates: number;
+  /** Filas anteriores al saldo inicial de la billetera (no se importan). */
+  skippedBefore: number;
   /** Activos vendidos por más de lo que había (falta la tenencia inicial). */
   missing: [string, number][];
 }
@@ -107,12 +110,17 @@ export default function ImportScreen() {
     const resolutions = await resolveAssets(result.rows);
 
     // Duplicados: operaciones que ya existen en la billetera elegida.
-    const walletTxs = p.transactions.filter((tx) => tx.walletId === wallet?.id);
+    const walletTxs = p.effective.filter((tx) => tx.walletId === wallet?.id);
     const existing = new Set(walletTxs.map((tx) => transactionFingerprint(tx)));
     const fresh: ImportedRow[] = [];
     let duplicates = 0;
+    let skippedBefore = 0;
     const seen = new Set<string>();
     for (const row of result.rows) {
+      if (isBeforeOpening(row.date, wallet?.openingDate)) {
+        skippedBefore += 1;
+        continue;
+      }
       const res = resolutions.get(keyOf(row));
       const assetId = res?.kind === 'owned' ? res.asset.id : undefined;
       const fp = transactionFingerprint({ ...row, assetId: assetId ?? row.symbol });
@@ -131,7 +139,7 @@ export default function ImportScreen() {
       ...fresh.filter((r) => r.assetType !== 'cash').map((r) => ({ ...r, key: r.symbol })),
     ]);
 
-    setAnalysis({ fileName, text, result, actions, resolutions, fresh, duplicates, missing: [...missing] });
+    setAnalysis({ fileName, text, result, actions, resolutions, fresh, duplicates, skippedBefore, missing: [...missing] });
   }
 
   const run = async (load: () => Promise<{ text: string; name: string } | null>) => {
@@ -300,6 +308,9 @@ export default function ImportScreen() {
               <Text>{t('importer.rows', { count: analysis.fresh.length })}</Text>
               {smart && smart.ignored > 0 ? <Text muted>{t('importer.ignoredRows', { count: smart.ignored })}</Text> : null}
               {analysis.duplicates > 0 ? <Text muted>{t('importer.duplicates', { count: analysis.duplicates })}</Text> : null}
+              {analysis.skippedBefore > 0 ? (
+                <Text muted>{t('opening.skippedBefore', { count: analysis.skippedBefore, date: f.date(wallet!.openingDate!) })}</Text>
+              ) : null}
               {customSymbols.length > 0 ? (
                 <Text variant="caption" color={c.warning}>
                   {t('importer.unknownSymbols', { symbols: customSymbols.join(', ') })}

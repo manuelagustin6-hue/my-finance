@@ -49,6 +49,11 @@ export interface Wallet {
   /** Moneda principal de la billetera. */
   currency: CurrencyCode;
   fees: FeeSchedule;
+  /**
+   * Fecha del saldo inicial (YYYY-MM-DD). Las tenencias cargadas como saldo inicial reflejan
+   * el portafolio al cierre de ese día; la actividad anterior o de ese mismo día se ignora.
+   */
+  openingDate?: string;
 }
 
 export type TransactionType =
@@ -117,7 +122,8 @@ export interface Transaction {
   /** Fecha ISO 8601 (YYYY-MM-DD o fecha y hora). */
   date: string;
   note?: string;
-  source?: 'manual' | 'csv' | 'api';
+  /** 'opening' = parte del saldo inicial de la billetera. */
+  source?: 'manual' | 'csv' | 'api' | 'opening';
   /** Identificador externo (p. ej. id de la operación en el exchange) para evitar duplicados. */
   externalId?: string;
 }
@@ -127,6 +133,11 @@ export interface Quote {
   price: number;
   currency: CurrencyCode;
   previousClose?: number;
+  /**
+   * Cantidad de unidades a la que corresponde el precio (por defecto 1). Los bonos suelen
+   * cotizar cada 100 nominales: `price` 65 con `unit` 100 = 0,65 por nominal.
+   */
+  unit?: number;
   /** Fecha ISO de la cotización. */
   asOf: string;
 }
@@ -134,6 +145,8 @@ export interface Quote {
 export interface PricePoint {
   date: string;
   close: number;
+  /** Unidades a las que corresponde el precio (ver Quote.unit). */
+  unit?: number;
 }
 
 /** Devuelve cuántas unidades de `to` vale 1 unidad de `from`, o undefined si no se conoce. */

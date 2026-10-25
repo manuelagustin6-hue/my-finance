@@ -20,7 +20,7 @@ export function PositionRow({
   const f = useFormat();
   const symbol = asset?.symbol ?? '?';
   const subtitle = position.hasQuote
-    ? `${f.num(position.quantity, 6)} · ${f.money(position.price ?? 0, asset?.currency ?? position.currency)}`
+    ? `${f.num(position.quantity, 6)} · ${f.money(position.quotePrice ?? position.price ?? 0, asset?.currency ?? position.currency)}`
     : t('positions.noQuote');
   return (
     <ListItem

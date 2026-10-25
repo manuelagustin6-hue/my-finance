@@ -111,11 +111,26 @@ function TransactionForm({ params }: { params: Params }) {
   const isSplit = type === 'split';
   const isTransfer = ['deposit', 'withdraw', 'transfer_in', 'transfer_out'].includes(type);
 
-  // Precarga el precio actual al elegir un activo con cotización.
+  /**
+   * Unidades a las que corresponde el precio que escribe el usuario. Los bonos cotizan cada
+   * 100 nominales: se ingresa el precio como lo publica el mercado y se guarda por unidad.
+   */
+  const assetKey = info ? `${info.type}:${info.symbol}` : '';
+  const [unitInfo, setUnitInfo] = useState<{ key: string; unit: number }>({ key: '', unit: 1 });
+  const unit = unitInfo.key === assetKey ? unitInfo.unit : 1;
+
+  // Al elegir un activo con cotización: unidad de cotización y precio actual como sugerencia.
   useEffect(() => {
-    if (!info || editing || price !== '' || !('providerId' in info) || !info.providerId) return;
+    if (!info || !('providerId' in info) || !info.providerId) return;
     void market.quotes([{ providerId: info.providerId, type: info.type }]).then(([q]) => {
-      if (q) setPrice((current) => (current === '' ? String(Number(q.price.toPrecision(8))) : current));
+      const u = q?.unit && q.unit > 0 ? q.unit : 1;
+      setUnitInfo({ key: assetKey, unit: u });
+      if (editing) {
+        // El precio guardado es por unidad: se muestra como lo publica el mercado.
+        if (u !== 1 && editing.price) setPrice(String(Number((editing.price * u).toPrecision(10))));
+      } else if (q) {
+        setPrice((current) => (current === '' ? String(Number(q.price.toPrecision(8))) : current));
+      }
     });
     // Solo al cambiar de activo.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -124,7 +139,8 @@ function TransactionForm({ params }: { params: Params }) {
   const qty = parseInput(quantity);
   const px = parseInput(price);
   const amt = parseInput(amount);
-  const gross = isAmountType ? (amt ?? 0) : (qty ?? 0) * (px ?? 0);
+  const unitPrice = px !== undefined ? px / unit : undefined;
+  const gross = isAmountType ? (amt ?? 0) : (qty ?? 0) * (unitPrice ?? 0);
   const autoFee = wallet && TRADE_TYPES.includes(type) && Number.isFinite(gross) ? roundFee(calculateFee(wallet.fees, gross)) : 0;
   const feeValue = feeTouched ? (parseInput(fee) ?? 0) : autoFee;
   const fx = parseInput(fxRate);
@@ -175,7 +191,7 @@ function TransactionForm({ params }: { params: Params }) {
             assetId: asset.id,
             type,
             quantity: isAmountType ? 0 : qty!,
-            price: isAmountType || isSplit ? 0 : px!,
+            price: isAmountType || isSplit ? 0 : unitPrice!,
             amount: isAmountType ? amt : undefined,
             fee: isSplit ? 0 : feeValue,
             currency,
@@ -310,7 +326,9 @@ function TransactionForm({ params }: { params: Params }) {
           {!isSplit ? (
             <View style={{ flex: 1 }}>
               <Field
-                label={isTransfer ? t('tx.costPrice') : t('tx.price')}
+                label={
+                  (isTransfer ? t('tx.costPrice') : t('tx.price')) + (unit !== 1 ? ` · ${t('tx.perUnits', { unit })}` : '')
+                }
                 value={price}
                 onChangeText={setPrice}
                 keyboardType="decimal-pad"

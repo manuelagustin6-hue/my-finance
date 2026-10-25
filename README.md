@@ -12,6 +12,8 @@ Aplicación móvil (iOS y Android) para consolidar en un solo lugar todas las in
 - **Ficha de cada activo** (aunque no se tenga): precio, gráfico, rendimiento por período, volatilidad anualizada, máxima caída, máximos/mínimos de 52 semanas; para acciones, estados financieros trimestrales y enlaces a las presentaciones.
 - **Análisis del portafolio**: evolución del valor, rendimiento ponderado por tiempo, desvío (volatilidad) y máxima caída; distribución por tipo de activo, país, moneda y billetera.
 - **Tipos de cambio globales** (más de 150 monedas) con el **dólar como moneda puente**: la cartera se ve en la moneda principal y en una secundaria (por defecto USD) con un toque. El costo de cada operación usa el tipo de cambio **del día en que se hizo**, así el resultado en pesos y en dólares es correcto. Para Argentina se elige el dólar a usar (oficial, MEP, CCL, blue, mayorista, cripto, tarjeta) y para Venezuela (oficial o paralelo). Incluye conversor y tabla de cotizaciones.
+- **Saldo inicial por billetera**: en lugar de importar toda la historia, se cargan las tenencias a una fecha (valuadas a precio de mercado de ese día o al costo propio) y desde ahí se miden los resultados; la actividad anterior se ignora y el importador la omite.
+- **Avisos explicados**: ventas mayores a la tenencia registrada, monedas sin tipo de cambio o cantidades inválidas se agrupan con su explicación y cómo resolverlos.
 - **Activos personalizados** con precio manual (bonos locales, plazos fijos, etc.).
 - **Freemium**: plan Gratis con límites y plan Pro por suscripción (RevenueCat).
 - Idiomas: español, inglés y portugués. Tema claro y oscuro.

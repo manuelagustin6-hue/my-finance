@@ -54,17 +54,17 @@ export default function AnalyticsScreen() {
   const today = new Date().toISOString().slice(0, 10);
   const yearAgo = periodStart('1Y', new Date())!;
   const fxCurrencies = useMemo(
-    () => [...new Set([...p.assets.map((a) => a.currency), ...p.transactions.map((tx) => tx.currency), p.base ?? 'USD'])],
-    [p.assets, p.transactions, p.base],
+    () => [...new Set([...p.assets.map((a) => a.currency), ...p.effective.map((tx) => tx.currency), p.base ?? 'USD'])],
+    [p.assets, p.effective, p.base],
   );
   const fxDates = useMemo(
-    () => [...weeklyDates(yearAgo, today), ...p.transactions.map((tx) => tx.date.slice(0, 10))],
-    [yearAgo, today, p.transactions],
+    () => [...weeklyDates(yearAgo, today), ...p.effective.map((tx) => tx.date.slice(0, 10))],
+    [yearAgo, today, p.effective],
   );
   const fxHistory = useFxHistory(allowed ? fxDates : [], fxCurrencies, p.prefs);
 
   const analysis = useMemo(() => {
-    if (!allowed || !p.base || historiesLoading || fxHistory.isLoading || p.transactions.length === 0) return undefined;
+    if (!allowed || !p.base || historiesLoading || fxHistory.isLoading || p.effective.length === 0) return undefined;
     const fxTable = new FxTable(p.fxSnapshot?.rates ?? {}, fxHistory.data ?? {});
     const map = new Map<string, readonly PricePoint[]>();
     held.forEach((a, i) => {
@@ -75,10 +75,10 @@ export default function AnalyticsScreen() {
     for (const a of p.assets) {
       if (!a.providerId && a.manualPrice !== undefined) map.set(a.id, [{ date: '1900-01-01', close: a.manualPrice }]);
     }
-    const first = p.transactions.reduce((min, tx) => (tx.date < min ? tx.date : min), today).slice(0, 10);
+    const first = p.effective.reduce((min, tx) => (tx.date < min ? tx.date : min), today).slice(0, 10);
     const dates = dailyDates(first > yearAgo ? first : yearAgo, today);
     const points = portfolioSeries({
-      transactions: p.transactions,
+      transactions: p.effective,
       histories: map,
       currencies: new Map(p.assets.map((a) => [a.id, a.currency])),
       baseCurrency: p.base,
@@ -86,7 +86,7 @@ export default function AnalyticsScreen() {
       dates,
     });
     return { points, risk: portfolioRisk(points) };
-  }, [allowed, p.base, p.fxSnapshot, fxHistory.data, fxHistory.isLoading, p.transactions, p.assets, held, histories, historiesLoading, today, yearAgo]);
+  }, [allowed, p.base, p.fxSnapshot, fxHistory.data, fxHistory.isLoading, p.effective, p.assets, held, histories, historiesLoading, today, yearAgo]);
 
   if (!allowed) {
     return (

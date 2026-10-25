@@ -108,6 +108,18 @@ describe('serie y riesgo del portafolio', () => {
     expect(risk.volatility).toBeCloseTo(standardDeviation([0.1, 0.2]) * Math.sqrt(365));
   });
 
+  it('usa la unidad de cotización de la historia (bonos cada 100 nominales)', () => {
+    const points = portfolioSeries({
+      transactions: [{ ...base, id: '1', type: 'buy', date: '2025-01-01', quantity: 1000, price: 0.6 }],
+      histories: new Map([['A', [{ date: '2025-01-01', close: 60, unit: 100 }]]]),
+      currencies: new Map([['A', 'USD']]),
+      baseCurrency: 'USD',
+      fx: () => 1,
+      dates: ['2025-01-01'],
+    });
+    expect(points[0]!.value).toBeCloseTo(600);
+  });
+
   it('convierte a moneda base', () => {
     const points = portfolioSeries({
       transactions: [{ ...base, id: '1', type: 'buy', date: '2025-01-01', quantity: 1, price: 100 }],

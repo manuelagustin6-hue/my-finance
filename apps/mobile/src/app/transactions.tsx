@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
-import { Card, Divider, EmptyState, ListItem, Loading, Notice, Screen } from '@/components/ui';
+import { Card, Divider, EmptyState, ListItem, Loading, Screen } from '@/components/ui';
+import { WarningsCard } from '@/components/WarningsCard';
 import { usePortfolio } from '@/hooks/queries';
 import { useFormat } from '@/hooks/useFormat';
 import { spacing } from '@/theme';
@@ -14,11 +15,12 @@ export default function TransactionsScreen() {
   if (p.isLoading) return <Screen><Loading /></Screen>;
 
   const txs = [...p.transactions].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-  const warningsById = new Map((p.warnings ?? []).map((w) => [w.transactionId, w.message]));
+  const counted = new Set(p.effective.map((tx) => tx.id));
+  const warningsById = new Map((p.warnings ?? []).map((w) => [w.transactionId, t(`warnings.${w.code}.short`)]));
 
   return (
     <Screen>
-      {warningsById.size > 0 ? <Notice tone="warning" text={t('home.warnings', { count: warningsById.size })} /> : null}
+      {p.warnings && p.warnings.length > 0 ? <WarningsCard warnings={p.warnings} assetsById={p.assetsById} showLink={false} /> : null}
       {txs.length === 0 ? (
         <EmptyState title={t('tx.empty')} />
       ) : (
@@ -26,7 +28,7 @@ export default function TransactionsScreen() {
           {txs.map((tx, i) => {
             const asset = p.assetsById.get(tx.assetId);
             const wallet = p.wallets.find((w) => w.id === tx.walletId);
-            const warning = warningsById.get(tx.id);
+            const warning = counted.has(tx.id) ? warningsById.get(tx.id) : t('opening.excluded');
             const amount = tx.amount ?? tx.quantity * tx.price;
             return (
               <View key={tx.id}>

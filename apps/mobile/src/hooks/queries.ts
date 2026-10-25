@@ -1,5 +1,6 @@
 import {
   computePositions,
+  effectiveTransactions,
   FxTable,
   type FxPreferences,
   summarizePortfolio,
@@ -204,19 +205,25 @@ export function usePortfolio(walletId?: string) {
 
   const quotes = useQuotes(refs);
 
+  // Con saldo inicial, la actividad anterior de esa billetera no cuenta (ya está en el saldo).
+  const effective = useMemo(
+    () => effectiveTransactions(transactions.data ?? [], wallets.data ?? []),
+    [transactions.data, wallets.data],
+  );
+
   const currencies = useMemo(() => {
     const set = new Set<string>();
-    for (const t of transactions.data ?? []) set.add(t.currency);
+    for (const t of effective) set.add(t.currency);
     for (const a of assets.data ?? []) set.add(a.currency);
     for (const q of quotes.data ?? []) set.add(q.currency);
     for (const w of wallets.data ?? []) set.add(w.currency);
     if (base) set.add(base);
     set.delete('USD');
     return [...set];
-  }, [transactions.data, assets.data, quotes.data, wallets.data, base]);
+  }, [effective, assets.data, quotes.data, wallets.data, base]);
 
   const fxSnapshot = useFxSnapshot(prefs);
-  const fxHistory = useFxHistory((transactions.data ?? []).map((t) => t.date), currencies, prefs);
+  const fxHistory = useFxHistory(effective.map((t) => t.date), currencies, prefs);
 
   const fxTable = useMemo(
     () => new FxTable(fxSnapshot.data?.rates ?? {}, fxHistory.data ?? {}),
@@ -236,7 +243,7 @@ export function usePortfolio(walletId?: string) {
       if (q) quoteMap.set(a.id, { ...q, assetId: a.id });
     }
 
-    const txs: Transaction[] = walletId ? transactions.data.filter((t) => t.walletId === walletId) : transactions.data;
+    const txs: Transaction[] = walletId ? effective.filter((t) => t.walletId === walletId) : effective;
     const computed = computePositions(txs, {
       baseCurrency: base,
       fx: fxHistorical,
@@ -268,7 +275,7 @@ export function usePortfolio(walletId?: string) {
       fxLookup,
       fxHistorical,
     };
-  }, [base, transactions.data, assets.data, quotes.data, fxTable, walletId, assetsById]);
+  }, [base, transactions.data, effective, assets.data, quotes.data, fxTable, walletId, assetsById]);
 
   const isLoading = profile.isLoading || wallets.isLoading || assets.isLoading || transactions.isLoading;
   const isError = profile.isError || wallets.isError || assets.isError || transactions.isError;
@@ -281,6 +288,8 @@ export function usePortfolio(walletId?: string) {
     assets: assets.data ?? [],
     assetsById,
     transactions: transactions.data ?? [],
+    /** Operaciones que cuentan para los cálculos (respeta el saldo inicial de cada billetera). */
+    effective,
     isLoading,
     isError,
     isFetchingQuotes: quotes.isFetching,

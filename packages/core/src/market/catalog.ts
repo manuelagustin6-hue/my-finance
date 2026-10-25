@@ -19,6 +19,8 @@ export interface CatalogEntry {
   marketCapM?: number;
   /** Sitio web del emisor (para su ícono). */
   domain?: string;
+  /** Unidades a las que corresponde el precio (bonos: 100 nominales). */
+  quoteUnit?: number;
 }
 
 /**
@@ -60,9 +62,9 @@ export const MOCK_CATALOG: readonly CatalogEntry[] = [
   { symbol: 'TLT', name: 'iShares 20+ Year Treasury Bond ETF', type: 'etf', currency: 'USD', exchange: 'NASDAQ', country: 'US', basePrice: 90, volatility: 0.16, drift: 0.02, domain: 'ishares.com' },
 
   // Bonos
-  { symbol: 'UST10Y', name: 'US Treasury Note 10 años', type: 'bond', currency: 'USD', country: 'US', basePrice: 98, volatility: 0.07, drift: 0.01 },
-  { symbol: 'AL30', name: 'Bono Rep. Argentina 2030 (Ley local)', type: 'bond', currency: 'USD', exchange: 'BYMA', country: 'AR', basePrice: 65, volatility: 0.25, drift: 0.1 },
-  { symbol: 'GD30', name: 'Bono Rep. Argentina 2030 (Ley NY)', type: 'bond', currency: 'USD', exchange: 'BYMA', country: 'AR', basePrice: 68, volatility: 0.24, drift: 0.1 },
+  { symbol: 'UST10Y', name: 'US Treasury Note 10 años', type: 'bond', currency: 'USD', country: 'US', basePrice: 98, volatility: 0.07, drift: 0.01, quoteUnit: 100 },
+  { symbol: 'AL30', name: 'Bono Rep. Argentina 2030 (Ley local)', type: 'bond', currency: 'USD', exchange: 'BYMA', country: 'AR', basePrice: 65, volatility: 0.25, drift: 0.1, quoteUnit: 100 },
+  { symbol: 'GD30', name: 'Bono Rep. Argentina 2030 (Ley NY)', type: 'bond', currency: 'USD', exchange: 'BYMA', country: 'AR', basePrice: 68, volatility: 0.24, drift: 0.1, quoteUnit: 100 },
 
   // Argentina
   { symbol: 'GGAL', name: 'Grupo Financiero Galicia', type: 'stock', currency: 'ARS', exchange: 'BYMA', country: 'AR', basePrice: 6500, volatility: 0.55, drift: 0.4, sector: 'Financiero', marketCapM: 9500000, domain: 'gfgsa.com' },

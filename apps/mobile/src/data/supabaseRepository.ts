@@ -24,6 +24,7 @@ function toWallet(r: Row): Wallet {
     id: String(r.id),
     name: String(r.name),
     platformId: optStr(r.platform_id),
+    openingDate: r.opening_date ? String(r.opening_date).slice(0, 10) : undefined,
     type: r.type as Wallet['type'],
     currency: String(r.currency),
     fees: { percent: num(r.fee_percent), fixed: num(r.fee_fixed), minimum: num(r.fee_minimum) },
@@ -160,6 +161,7 @@ export class SupabaseRepository implements Repository {
     const row = {
       name: w.name,
       platform_id: w.platformId ?? null,
+      opening_date: w.openingDate ?? null,
       type: w.type,
       currency: w.currency,
       fee_percent: w.fees.percent,

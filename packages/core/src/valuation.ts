@@ -3,8 +3,12 @@ import type { Asset, AssetType, CurrencyCode, FxLookup, Quote } from './types.ts
 
 export interface ValuedPosition extends Position {
   avgCost: number;
-  /** Precio actual en la moneda del activo (undefined si no hay cotización). */
+  /** Precio actual por unidad en la moneda del activo (undefined si no hay cotización). */
   price?: number;
+  /** Precio tal como lo publica el mercado (p. ej. cada 100 nominales en bonos), para mostrar. */
+  quotePrice?: number;
+  /** Unidades a las que corresponde `quotePrice`. */
+  quoteUnit: number;
   marketValue: number;
   marketValueBase: number;
   /** Resultado no realizado: valor de mercado − costo (comisiones incluidas). */
@@ -37,7 +41,9 @@ function currentFx(ctx: ValuationContext, from: CurrencyCode): number {
 export function valuePosition(position: Position, ctx: ValuationContext): ValuedPosition {
   const asset = ctx.assets?.get(position.assetId);
   const quote = ctx.quotes.get(position.assetId);
-  const price = quote?.price ?? asset?.manualPrice;
+  // Precio por unidad: los bonos cotizan cada 100 nominales (quote.unit = 100).
+  const unit = quote?.unit && quote.unit > 0 ? quote.unit : 1;
+  const price = quote ? quote.price / unit : asset?.manualPrice;
   const priceCurrency = quote?.currency ?? asset?.currency ?? position.currency;
   const fx = currentFx(ctx, priceCurrency);
 
@@ -53,7 +59,7 @@ export function valuePosition(position: Position, ctx: ValuationContext): Valued
   let dayChangeBase = 0;
   let dayChangePct = 0;
   if (hasQuote && quote?.previousClose && quote.previousClose > 0) {
-    dayChangeBase = position.quantity * (quote.price - quote.previousClose) * fx;
+    dayChangeBase = (position.quantity * (quote.price - quote.previousClose) * fx) / unit;
     dayChangePct = quote.price / quote.previousClose - 1;
   }
 
@@ -61,6 +67,8 @@ export function valuePosition(position: Position, ctx: ValuationContext): Valued
     ...position,
     avgCost: averageCost(position),
     price,
+    quotePrice: quote?.price ?? asset?.manualPrice,
+    quoteUnit: unit,
     marketValue,
     marketValueBase,
     unrealizedPnl,
