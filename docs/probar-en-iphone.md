@@ -28,8 +28,11 @@ Descarga **Expo Go** desde el App Store.
 ## 5. Publicar la app
 
 1. Entra a [github.com/manuelagustin6-hue/my-finance/actions](https://github.com/manuelagustin6-hue/my-finance/actions).
-2. Elige **Probar en Expo Go** → **Run workflow** → rama `claude/portfolio-app-mvp` → **Run workflow**.
-3. Espera a que termine (círculo verde, unos 5 minutos).
+2. Toca la ejecución más reciente de **Probar en Expo Go**.
+3. Toca **Re-run all jobs** (en el celular puede estar dentro del menú **···**) y confirma. Así vuelve a correr usando el token que acabas de guardar.
+4. Espera a que termine (círculo verde, unos 5 minutos).
+
+> El botón *Run workflow* aparecerá recién cuando este trabajo se incorpore a la rama principal (`main`). Mientras tanto, usa *Re-run all jobs*.
 
 ## 6. Abrir la app
 
