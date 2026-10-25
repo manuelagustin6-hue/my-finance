@@ -2,7 +2,7 @@ import {
   canAddAsset,
   canImport,
   GENERIC_TEMPLATE_EXAMPLE,
-  importCsv,
+  importFile,
   isBeforeOpening,
   isSmartResult,
   missingHoldings,
@@ -14,6 +14,8 @@ import {
   type Asset,
   type AssetSearchResult,
   type ColumnRole,
+  type HoldingRow,
+  type HoldingsResult,
   type ImportedRow,
   type ImportResult,
   type RowAction,
@@ -25,13 +27,15 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, View } from 'react-native';
+import { AssetLogo } from '@/components/AssetLogo';
 import { Button, Card, Chips, Divider, Field, Notice, Row, Screen, Section, Text } from '@/components/ui';
 import { isPlanLimitError, market, repository, type NewTransaction } from '@/data';
-import { useImports, useInvalidateUserData, usePortfolio } from '@/hooks/queries';
+import { refOf, useImports, useInvalidateUserData, usePortfolio } from '@/hooks/queries';
 import { useFormat } from '@/hooks/useFormat';
 import { sheetBytesToCsv, UnsupportedSheetError } from '@/import/readSheet';
 import { shareTextFile } from '@/lib/exporter';
 import { loadImportActions, saveImportActions } from '@/lib/importMemory';
+import { openingTransactions, saveOpeningBalance, type OpeningEntry } from '@/lib/openingBalance';
 import { usePlan } from '@/state/app';
 import { usePendingImport } from '@/state/pendingImport';
 import { spacing, useTheme } from '@/theme';
@@ -55,9 +59,27 @@ interface Analysis {
   missing: [string, number][];
 }
 
+/** Tenencia a una fecha (cartera actual) que se carga como saldo inicial. */
+interface HoldingsAnalysis {
+  fileName: string;
+  result: HoldingsResult;
+  resolutions: Map<string, AssetResolution>;
+}
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const todayIso = () => new Date().toISOString().slice(0, 10);
+
 const ACTIONS: RowAction[] = ['buy', 'sell', 'dividend', 'interest', 'fee', 'deposit', 'withdraw', 'transfer_in', 'split', 'ignore'];
 const ROLES: ColumnRole[] = ['date', 'type', 'symbol', 'instrument', 'quantity', 'price', 'gross', 'fee', 'currency', 'total'];
+type AssetRow = Pick<ImportedRow, 'symbol' | 'assetType' | 'name' | 'currency'>;
 const keyOf = (row: Pick<ImportedRow, 'symbol' | 'assetType'>) => `${row.symbol}|${row.assetType ?? ''}`;
+
+/** Datos para mostrar el logo de un activo resuelto. */
+function logoOf(res: AssetResolution | undefined, row: HoldingRow) {
+  if (res?.kind === 'owned') return res.asset;
+  if (res?.kind === 'catalog') return res.result;
+  return { symbol: row.symbol, type: row.assetType ?? 'other' };
+}
 
 async function readFile(asset: DocumentPicker.DocumentPickerAsset): Promise<string> {
   const bytes = Platform.OS === 'web' ? new Uint8Array(await (await fetch(asset.uri)).arrayBuffer()) : await new File(asset.uri).bytes();
@@ -75,6 +97,8 @@ export default function ImportScreen() {
   const params = useLocalSearchParams<{ walletId?: string }>();
   const [walletId, setWalletId] = useState<string | undefined>(params.walletId);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [holdings, setHoldings] = useState<HoldingsAnalysis | null>(null);
+  const [holdingsDate, setHoldingsDate] = useState(todayIso);
   const [pasted, setPasted] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ text: string; tone: 'info' | 'warning' } | null>(null);
@@ -83,7 +107,7 @@ export default function ImportScreen() {
   const platform = platformById(wallet?.platformId);
 
   /** Vincula cada símbolo con un activo propio, uno del catálogo o uno personalizado nuevo. */
-  async function resolveAssets(rows: ImportedRow[]): Promise<Map<string, AssetResolution>> {
+  async function resolveAssets(rows: readonly AssetRow[]): Promise<Map<string, AssetResolution>> {
     const map = new Map<string, AssetResolution>();
     for (const row of rows) {
       const key = keyOf(row);
@@ -112,7 +136,15 @@ export default function ImportScreen() {
       const mapping = detectSmartMapping(parseCsv(text));
       actions = mapping ? await loadImportActions(mapping.headers) : {};
     }
-    const result = importCsv(text, undefined, { actions, defaultCurrency: wallet?.currency });
+    const parsed = importFile(text, { actions, defaultCurrency: wallet?.currency });
+    if (parsed.kind === 'holdings') {
+      const resolutions = await resolveAssets(parsed.result.rows);
+      setAnalysis(null);
+      setHoldings({ fileName, result: parsed.result, resolutions });
+      return;
+    }
+    setHoldings(null);
+    const result = parsed.result;
     const resolutions = await resolveAssets(result.rows);
 
     // Duplicados: operaciones que ya existen en la billetera elegida.
@@ -208,6 +240,75 @@ export default function ImportScreen() {
     }
   };
 
+  /** Crea (o reutiliza) el activo de una resolución. */
+  const materialize = (res: AssetResolution): Promise<Asset> =>
+    res.kind === 'owned'
+      ? Promise.resolve(res.asset)
+      : res.kind === 'catalog'
+        ? repository.ensureAsset(res.result)
+        : repository.createCustomAsset({ symbol: res.symbol, name: res.name, type: res.type, currency: res.currency });
+
+  const holdingsDateValid = DATE_RE.test(holdingsDate) && !Number.isNaN(Date.parse(holdingsDate)) && holdingsDate <= todayIso();
+
+  /**
+   * Costo por unidad de una tenencia, en la moneda del activo: el costo promedio del archivo;
+   * si no está, el precio de mercado de la fecha; si tampoco, el precio o valor del archivo.
+   */
+  async function holdingCost(row: HoldingRow, asset: Asset): Promise<number> {
+    if (row.assetType === 'cash' || asset.type === 'cash') return 1;
+    const ref = refOf(asset);
+    const point = ref ? await market.priceOn(ref, holdingsDate).catch(() => null) : null;
+    const unit = row.priceUnit ?? point?.unit ?? 1;
+    const fx = row.currency === asset.currency ? 1 : (p.fxHistorical?.(row.currency, asset.currency, holdingsDate) ?? 1);
+    if (row.unitCost !== undefined) return (row.unitCost / unit) * fx;
+    if (point) return point.close / (point.unit ?? 1);
+    if (row.marketPrice !== undefined) return (row.marketPrice / unit) * fx;
+    if (row.value !== undefined && row.quantity > 0) return (row.value / row.quantity) * fx;
+    return 0;
+  }
+
+  const confirmHoldings = async () => {
+    if (!holdings || !wallet || !holdingsDateValid) return;
+    const rows = holdings.result.rows;
+    // Límite de activos del plan Gratis: se verifica antes de escribir nada.
+    const held = new Set(p.transactions.filter((tx) => !(tx.walletId === wallet.id && tx.source === 'opening')).map((tx) => tx.assetId));
+    for (const row of rows) {
+      const res = holdings.resolutions.get(keyOf(row));
+      const id = res?.kind === 'owned' ? res.asset.id : `new:${keyOf(row)}`;
+      if (!canAddAsset(plan, held, id).allowed) {
+        router.replace('/paywall?reason=assets');
+        return;
+      }
+      held.add(id);
+    }
+
+    setBusy(true);
+    setMessage(null);
+    try {
+      const entries: OpeningEntry[] = [];
+      for (const row of rows) {
+        const asset = await materialize(holdings.resolutions.get(keyOf(row))!);
+        entries.push({ asset, quantity: row.quantity, unitCost: await holdingCost(row, asset) });
+        // Activos sin cotización (p. ej. un FCI): se guarda el precio actual del archivo para valuarlos.
+        const filePrice = row.marketPrice ?? (row.value !== undefined && row.quantity > 0 ? row.value / row.quantity : undefined);
+        if (!asset.providerId && asset.type !== 'cash' && filePrice !== undefined) {
+          const fx = row.currency === asset.currency ? 1 : (p.fxHistorical?.(row.currency, asset.currency, holdingsDate) ?? 1);
+          await repository.setManualPrice(asset.id, (filePrice / (row.priceUnit ?? 1)) * fx);
+        }
+      }
+      await saveOpeningBalance(wallet, holdingsDate, entries, openingTransactions(p.transactions, wallet.id));
+      await invalidate();
+      setHoldings(null);
+      setPasted('');
+      setMessage({ text: t('importer.holdingsSuccess', { count: entries.length, date: f.date(holdingsDate) }), tone: 'info' });
+    } catch (error) {
+      if (isPlanLimitError(error)) router.replace(`/paywall?reason=${error.reason}`);
+      else setMessage({ text: t('common.error'), tone: 'warning' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const confirmImport = async () => {
     if (!analysis || !wallet) return;
     if (!canImport(plan, imports.data?.length ?? 0).allowed) {
@@ -240,12 +341,7 @@ export default function ImportScreen() {
       const assetIds = new Map<string, string>();
       for (const [key, res] of analysis.resolutions) {
         if (!analysis.fresh.some((r) => keyOf(r) === key)) continue;
-        const asset =
-          res.kind === 'owned'
-            ? res.asset
-            : res.kind === 'catalog'
-              ? await repository.ensureAsset(res.result)
-              : await repository.createCustomAsset({ symbol: res.symbol, name: res.name, type: res.type, currency: res.currency });
+        const asset = await materialize(res);
         assetIds.set(key, asset.id);
       }
 
@@ -278,6 +374,77 @@ export default function ImportScreen() {
     }
   };
 
+  // Función de render (no componente) para que el campo de fecha no se vuelva a montar al escribir.
+  function renderHoldings() {
+    if (!holdings) return null;
+    const { rows, skipped, errors } = holdings.result;
+    const custom = rows.filter((r) => holdings.resolutions.get(keyOf(r))?.kind === 'custom' && r.assetType !== 'cash').map((r) => r.symbol);
+    return (
+      <Section title={t('importer.holdingsTitle', { count: rows.length })}>
+        <Text variant="caption" muted>
+          {t('importer.holdingsHelp')}
+        </Text>
+        <Field
+          label={t('importer.holdingsDate')}
+          value={holdingsDate}
+          onChangeText={setHoldingsDate}
+          placeholder={todayIso()}
+          maxLength={10}
+          help={t('opening.dateHelp')}
+          error={holdingsDateValid ? undefined : t('opening.errors.date')}
+        />
+        {wallet?.openingDate ? <Notice tone="warning" text={t('importer.holdingsReplace', { date: f.date(wallet.openingDate) })} /> : null}
+        <Card style={{ paddingVertical: spacing.xs }}>
+          {rows.map((row, i) => {
+            const unit = row.priceUnit ?? 1;
+            const detail =
+              row.assetType === 'cash'
+                ? t('assetTypes.cash')
+                : row.unitCost !== undefined
+                  ? `${t('importer.holdingsCost', { price: f.money(row.unitCost, row.currency) })}${unit !== 1 ? ` · ${t('tx.perUnits', { unit })}` : ''}`
+                  : t('importer.holdingsMarketCost');
+            return (
+              <View key={keyOf(row) + row.currency}>
+                {i > 0 ? <Divider /> : null}
+                <Row style={{ paddingVertical: spacing.sm }}>
+                  <AssetLogo asset={logoOf(holdings.resolutions.get(keyOf(row)), row)} index={i} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontWeight: '600' }} numberOfLines={1}>
+                      {row.symbol}
+                      {row.name ? ` · ${row.name}` : ''}
+                    </Text>
+                    <Text variant="caption" muted numberOfLines={1}>
+                      {detail}
+                    </Text>
+                  </View>
+                  <Text style={{ fontWeight: '600' }}>{f.num(row.quantity, 4)}</Text>
+                </Row>
+              </View>
+            );
+          })}
+        </Card>
+        {skipped > 0 ? <Text variant="caption" muted>{t('importer.holdingsSkipped', { count: skipped })}</Text> : null}
+        {custom.length > 0 ? (
+          <Text variant="caption" color={c.warning}>
+            {t('importer.unknownSymbols', { symbols: custom.join(', ') })}
+          </Text>
+        ) : null}
+        {errors.slice(0, 10).map((e, i) => (
+          <Text key={i} variant="caption" color={c.negative}>
+            {t('importer.line', { line: e.line })}: {e.message}
+          </Text>
+        ))}
+        <Button
+          title={t('importer.holdingsConfirm')}
+          onPress={confirmHoldings}
+          loading={busy}
+          disabled={rows.length === 0 || !holdingsDateValid}
+        />
+        <Button title={t('common.cancel')} variant="ghost" small onPress={() => setHoldings(null)} />
+      </Section>
+    );
+  }
+
   if (p.wallets.length === 0) {
     return (
       <Screen>
@@ -305,23 +472,12 @@ export default function ImportScreen() {
         onChange={(id) => {
           setWalletId(id);
           setAnalysis(null);
+          setHoldings(null);
         }}
       />
-      <Button
-        title={platform ? t('importer.fromWeb', { name: platform.name }) : t('importer.fromWebGeneric')}
-        icon="globe-outline"
-        onPress={openBrokerWeb}
-        disabled={busy}
-      />
-      <Button
-        title={t('importer.chooseFile')}
-        icon="document-attach-outline"
-        variant="secondary"
-        onPress={pickFile}
-        loading={busy && !analysis}
-      />
+      <Button title={t('importer.chooseFile')} icon="document-attach-outline" onPress={pickFile} loading={busy && !analysis && !holdings} />
 
-      {!analysis ? (
+      {!analysis && !holdings ? (
         <Card style={{ gap: spacing.sm }}>
           <Field
             label={t('importer.pasteLabel')}
@@ -344,6 +500,8 @@ export default function ImportScreen() {
       ) : null}
 
       {message ? <Notice text={message.text} tone={message.tone} /> : null}
+
+      {holdings ? renderHoldings() : null}
 
       {analysis ? (
         <>
@@ -435,6 +593,16 @@ export default function ImportScreen() {
         </>
       ) : null}
 
+      {!analysis && !holdings ? (
+        <Button
+          title={platform ? t('importer.fromWeb', { name: platform.name }) : t('importer.fromWebGeneric')}
+          icon="globe-outline"
+          variant="ghost"
+          small
+          onPress={openBrokerWeb}
+          disabled={busy}
+        />
+      ) : null}
       <Button
         title={t('importer.shareTemplate')}
         variant="ghost"

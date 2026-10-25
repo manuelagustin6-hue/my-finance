@@ -47,6 +47,17 @@ Para confirmar qué versión estás usando: en la app, *Ajustes* → al final fi
 
 Cada vez que se suben cambios a la rama `claude/portfolio-app-mvp`, la app se publica sola. En Expo Go, cierra la app y vuelve a abrirla con el enlace permanente para recibir la versión nueva; en *Ajustes* verás la fecha de publicación actualizada.
 
+## Cargar tu tenencia actual
+
+La forma más rápida de empezar es cargar lo que tienes hoy:
+
+1. En la web o la app de tu broker, exporta o copia la tabla de tu cartera (activo, cantidad y, si aparece, precio promedio).
+   - Si el broker te la envía por mail (como Cocos), abre el mail en el iPhone, mantén presionado el adjunto y elige **Guardar en Archivos**.
+2. En la app: *Importar historial* → **Elegir archivo (CSV o Excel)**, o pega las filas copiadas.
+3. La app reconoce que es una tenencia y muestra la lista de activos. Revisa la fecha y toca **Cargar como saldo inicial**.
+
+Desde esa fecha la app mide tus resultados. Si no hay precio promedio, se toma el precio de mercado de ese día.
+
 ## Importar desde la web de tu broker
 
 1. En *Billeteras*, abre tu billetera y toca **Desde la web de {plataforma}** (o, en *Importar historial*, **Abrir la web de…**).

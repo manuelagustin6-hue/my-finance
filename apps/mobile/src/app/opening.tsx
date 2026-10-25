@@ -1,11 +1,4 @@
-import {
-  canAddAsset,
-  isOpening,
-  OPENING_NOTE,
-  type Asset,
-  type Transaction,
-  type Wallet,
-} from '@my-finance/core';
+import { canAddAsset, type Asset, type Transaction, type Wallet } from '@my-finance/core';
 import { useQueries } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -14,10 +7,11 @@ import { View } from 'react-native';
 import { AssetLogo } from '@/components/AssetLogo';
 import { AssetSearch, pickedInfo, pickedKey, type PickedAsset } from '@/components/AssetSearch';
 import { Button, Card, Chips, Divider, Field, Loading, Notice, Row, Screen, Section, Text } from '@/components/ui';
-import { isPlanLimitError, market, repository, type NewTransaction } from '@/data';
+import { isPlanLimitError, market, repository } from '@/data';
 import { refOf, useInvalidateUserData, usePortfolio } from '@/hooks/queries';
 import { useFormat } from '@/hooks/useFormat';
 import { confirmDestructive, parseInput } from '@/lib/confirm';
+import { openingTransactions, saveOpeningBalance } from '@/lib/openingBalance';
 import { usePlan } from '@/state/app';
 import { spacing, useTheme } from '@/theme';
 
@@ -72,7 +66,7 @@ function OpeningForm({ initialWallet }: { initialWallet: Wallet }) {
   const [walletId, setWalletId] = useState(initialWallet.id);
   const wallet = p.wallets.find((w) => w.id === walletId) ?? initialWallet;
 
-  const existingOpening = (id: string) => p.transactions.filter((tx) => tx.walletId === id && isOpening(tx));
+  const existingOpening = (id: string) => openingTransactions(p.transactions, id);
   const entriesFrom = (txs: Transaction[]): Entry[] =>
     txs.flatMap((tx) => {
       const asset = p.assetsById.get(tx.assetId);
@@ -169,21 +163,12 @@ function OpeningForm({ initialWallet }: { initialWallet: Wallet }) {
       for (const e of entries) {
         assets.push(e.picked.kind === 'owned' ? e.picked.asset : await repository.ensureAsset(e.picked.result));
       }
-      for (const tx of existingOpening(wallet.id)) await repository.deleteTransaction(tx.id);
-      const transactions: NewTransaction[] = entries.map((e, i) => ({
-        walletId: wallet.id,
-        assetId: assets[i]!.id,
-        type: 'deposit',
-        quantity: parseInput(e.quantity)!,
-        price: unitCost(e, i)!,
-        fee: 0,
-        currency: assets[i]!.currency,
+      await saveOpeningBalance(
+        wallet,
         date,
-        note: OPENING_NOTE,
-        source: 'opening',
-      }));
-      await repository.saveTransactions(transactions);
-      await repository.saveWallet({ ...wallet, openingDate: date });
+        entries.map((e, i) => ({ asset: assets[i]!, quantity: parseInput(e.quantity)!, unitCost: unitCost(e, i)! })),
+        existingOpening(wallet.id),
+      );
       await invalidate();
       router.back();
     } catch (err) {
@@ -210,6 +195,13 @@ function OpeningForm({ initialWallet }: { initialWallet: Wallet }) {
   return (
     <Screen>
       <Text muted>{t('opening.intro')}</Text>
+      <Button
+        title={t('opening.fromFile')}
+        variant="secondary"
+        small
+        icon="document-attach-outline"
+        onPress={() => router.push({ pathname: '/import', params: { walletId } })}
+      />
       {p.wallets.length > 1 ? (
         <Chips label={t('tx.wallet')} options={p.wallets.map((w) => ({ value: w.id, label: w.name }))} value={walletId} onChange={switchWallet} />
       ) : null}

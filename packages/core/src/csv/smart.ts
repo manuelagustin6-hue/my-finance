@@ -123,7 +123,7 @@ export function detectColumns(headers: readonly string[]): Partial<Record<Column
  * Formato que indica un número, o null si es ambiguo ("1.428" puede ser mil cuatrocientos
  * veintiocho o uno coma cuatro).
  */
-function numberHint(raw: string): NumberFormat | null {
+export function numberHint(raw: string): NumberFormat | null {
   const s = raw.trim().replace(/[^\d.,]/g, '');
   const dots = (s.match(/\./g) ?? []).length;
   const commas = (s.match(/,/g) ?? []).length;

@@ -52,15 +52,24 @@ export function isBlankRow(row: readonly string[]): boolean {
 }
 
 export function detectDelimiter(text: string): string {
-  const firstLine = text.split(/\r?\n/, 1)[0] ?? '';
+  // Se miran varias líneas: algunos archivos empiezan con un título sin separadores.
+  const lines = text.split(/\r?\n/).filter((l) => l.trim()).slice(0, 15);
   const candidates = [',', ';', '\t'];
   let best = ',';
-  let bestCount = 0;
+  let bestScore = 0;
   for (const c of candidates) {
-    const count = firstLine.split(c).length - 1;
-    if (count > bestCount) {
-      best = c;
-      bestCount = count;
+    // El separador correcto aparece la misma cantidad de veces en casi todas las filas.
+    const freq = new Map<number, number>();
+    for (const line of lines) {
+      const count = line.split(c).length - 1;
+      if (count > 0) freq.set(count, (freq.get(count) ?? 0) + 1);
+    }
+    for (const [count, times] of freq) {
+      const score = times * 1000 + count;
+      if (score > bestScore) {
+        best = c;
+        bestScore = score;
+      }
     }
   }
   return best;
