@@ -2,7 +2,7 @@ import { ALL_CURRENCY_CODES, currencyName, MAIN_CURRENCIES } from '@my-finance/c
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Modal, Pressable, TextInput, View } from 'react-native';
+import { FlatList, Modal, Platform, Pressable, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { i18nLanguage } from '@/lib/language';
 import { radius, spacing, useTheme } from '@/theme';
@@ -126,6 +126,8 @@ export function CurrencyPickerModal({
           data={items}
           keyExtractor={(code) => code}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          automaticallyAdjustKeyboardInsets
           contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.xl }}
           ItemSeparatorComponent={Divider}
           renderItem={({ item, index }) => (

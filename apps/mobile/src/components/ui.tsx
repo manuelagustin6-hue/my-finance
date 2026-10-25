@@ -4,6 +4,7 @@ import type { ComponentProps, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -38,6 +39,9 @@ export function Screen({
       style={{ backgroundColor: c.background }}
       contentContainerStyle={styles.screen}
       keyboardShouldPersistTaps="handled"
+      // Deslizar hacia abajo oculta el teclado y el contenido deja lugar para el teclado.
+      keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      automaticallyAdjustKeyboardInsets
       refreshControl={
         onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={c.muted} /> : undefined
       }

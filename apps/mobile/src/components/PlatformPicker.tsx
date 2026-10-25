@@ -48,6 +48,7 @@ export function PlatformSearch({ onSelect }: { onSelect: (choice: PlatformChoice
         onChangeText={setQuery}
         autoCorrect={false}
         autoFocus
+        returnKeyType="done"
         maxLength={80}
       />
       <Card style={{ paddingVertical: spacing.xs }}>
