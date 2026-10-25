@@ -10,3 +10,4 @@ android/
 coverage/
 supabase/.temp/
 .DS_Store
+supabase/functions/_shared/core/
