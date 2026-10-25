@@ -186,9 +186,10 @@ export function portfolioSeries(input: PortfolioSeriesInput): PortfolioPoint[] {
   let index = 1;
   let prevValue = 0;
 
-  const toBase = (amount: number, currency: CurrencyCode, date: string, txRate?: number) => {
+  const toBase = (amount: number, currency: CurrencyCode, date: string, tx?: Transaction) => {
     if (currency === input.baseCurrency) return amount;
-    const rate = txRate ?? input.fx(currency, input.baseCurrency, date) ?? 1;
+    const stored = tx?.fxRate && (!tx.fxBase || tx.fxBase === input.baseCurrency) ? tx.fxRate : undefined;
+    const rate = stored ?? input.fx(currency, input.baseCurrency, date) ?? 1;
     return amount * rate;
   };
 
@@ -204,7 +205,7 @@ export function portfolioSeries(input: PortfolioSeriesInput): PortfolioPoint[] {
         case 'transfer_in':
           quantities.set(tx.assetId, q + tx.quantity);
           if (tx.type === 'buy' || tx.type === 'deposit') {
-            const cash = toBase(gross + tx.fee, tx.currency, tx.date, tx.fxRate);
+            const cash = toBase(gross + tx.fee, tx.currency, tx.date, tx);
             flow += cash;
           }
           break;
@@ -213,7 +214,7 @@ export function portfolioSeries(input: PortfolioSeriesInput): PortfolioPoint[] {
         case 'transfer_out':
           quantities.set(tx.assetId, Math.max(0, q - tx.quantity));
           if (tx.type === 'sell' || tx.type === 'withdraw') {
-            flow -= toBase(gross - tx.fee, tx.currency, tx.date, tx.fxRate);
+            flow -= toBase(gross - tx.fee, tx.currency, tx.date, tx);
           }
           break;
         case 'split':
@@ -222,10 +223,10 @@ export function portfolioSeries(input: PortfolioSeriesInput): PortfolioPoint[] {
         case 'dividend':
         case 'interest':
           // El cobro sale de la cartera: se trata como retiro para que sume al rendimiento.
-          flow -= toBase((tx.amount ?? gross) - tx.fee, tx.currency, tx.date, tx.fxRate);
+          flow -= toBase((tx.amount ?? gross) - tx.fee, tx.currency, tx.date, tx);
           break;
         case 'fee':
-          flow += toBase((tx.amount ?? gross) + tx.fee, tx.currency, tx.date, tx.fxRate);
+          flow += toBase((tx.amount ?? gross) + tx.fee, tx.currency, tx.date, tx);
           break;
       }
     }

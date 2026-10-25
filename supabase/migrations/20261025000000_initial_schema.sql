@@ -23,6 +23,7 @@ create table public.profiles (
   base_currency text not null default 'USD' check (base_currency ~ '^[A-Z]{3,5}$'),
   locale text not null default 'es',
   country text check (country is null or country ~ '^[A-Z]{2}$'),
+  onboarded boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -122,6 +123,8 @@ create table public.transactions (
   fee numeric(28, 10) not null default 0 check (fee >= 0),
   currency text not null,
   fx_rate numeric(28, 10) check (fx_rate is null or fx_rate > 0),
+  -- Moneda base contra la que se registró fx_rate.
+  fx_base text,
   executed_at timestamptz not null,
   note text,
   source public.transaction_source not null default 'manual',

@@ -92,8 +92,10 @@ function resolveFx(
   options: ComputePositionsOptions,
   warnings: PositionWarning[],
 ): number {
-  if (tx.fxRate !== undefined && tx.fxRate > 0) return tx.fxRate;
   if (tx.currency === options.baseCurrency) return 1;
+  if (tx.fxRate !== undefined && tx.fxRate > 0 && (!tx.fxBase || tx.fxBase === options.baseCurrency)) {
+    return tx.fxRate;
+  }
   const rate = options.fx?.(tx.currency, options.baseCurrency, tx.date);
   if (rate !== undefined && rate > 0) return rate;
   warnings.push({

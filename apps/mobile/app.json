@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "My Finance",
+    "slug": "my-finance",
+    "scheme": "myfinance",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.myfinance.app",
+      "config": { "usesNonExemptEncryption": false }
+    },
+    "android": {
+      "package": "com.myfinance.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "output": "single"
+    },
+    "plugins": ["expo-router", "expo-localization", "expo-sharing"],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}

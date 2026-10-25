@@ -108,6 +108,14 @@ describe('computePositions', () => {
     expect(v.unrealizedPnl).toBe(10);
   });
 
+  it('ignora el tipo de cambio guardado si se registró contra otra moneda base', () => {
+    const { consolidated } = computePositions(
+      [tx({ type: 'buy', date: '2025-01-01', quantity: 1, price: 100, fxRate: 1000, fxBase: 'ARS' })],
+      { baseCurrency: 'EUR', fx: () => 0.9 },
+    );
+    expect(consolidated[0]!.costBasisBase).toBeCloseTo(90);
+  });
+
   it('usa el tipo de cambio histórico cuando la operación no lo trae', () => {
     const { consolidated, warnings } = computePositions(
       [tx({ type: 'buy', date: '2025-01-01', quantity: 2, price: 50 })],

@@ -30,7 +30,8 @@ type Body =
   | { action: 'quotes'; assets: AssetRef[] }
   | { action: 'history'; asset: AssetRef; range: HistoryRange }
   | { action: 'fundamentals'; asset: AssetRef }
-  | { action: 'fx'; base: string; currencies: string[] };
+  | { action: 'fx'; base: string; currencies: string[] }
+  | { action: 'ensure_asset'; asset: AssetRef };
 
 async function planOf(userId: string): Promise<PlanId> {
   const { data } = await adminClient().rpc('current_plan', { uid: userId });
@@ -121,6 +122,50 @@ Deno.serve(async (req) => {
 
       case 'fx':
         return json(await provider.getFxRates(body.base, body.currencies ?? []));
+
+      case 'ensure_asset': {
+        // Solo el servidor agrega activos al catálogo global, y únicamente si el proveedor los conoce.
+        const match = (await provider.search(body.asset.providerId, 50)).find(
+          (r) => r.providerId === body.asset.providerId && r.type === body.asset.type,
+        );
+        if (!match) return json({ error: 'ASSET_NOT_FOUND' }, 404);
+        const db = adminClient();
+        const { data: existing } = await db
+          .from('assets')
+          .select('*')
+          .is('owner_id', null)
+          .eq('provider', provider.id)
+          .eq('provider_id', match.providerId)
+          .maybeSingle();
+        if (existing) return json(existing);
+        const { data, error } = await db
+          .from('assets')
+          .insert({
+            symbol: match.symbol,
+            name: match.name,
+            type: match.type,
+            currency: match.currency,
+            exchange: match.exchange ?? null,
+            country: match.country ?? null,
+            provider: provider.id,
+            provider_id: match.providerId,
+          })
+          .select('*')
+          .single();
+        if (error?.code === '23505') {
+          // Otro pedido lo creó en paralelo: devolver el existente.
+          const { data: created } = await db
+            .from('assets')
+            .select('*')
+            .is('owner_id', null)
+            .eq('provider', provider.id)
+            .eq('provider_id', match.providerId)
+            .single();
+          return json(created);
+        }
+        if (error) throw error;
+        return json(data);
+      }
 
       default:
         return json({ error: 'UNKNOWN_ACTION' }, 400);

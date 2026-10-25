@@ -103,8 +103,13 @@ export interface Transaction {
   fee: number;
   /** Moneda del precio, del monto y de la comisión. */
   currency: CurrencyCode;
-  /** Unidades de moneda base por 1 unidad de `currency` a la fecha de la operación. */
+  /** Unidades de `fxBase` por 1 unidad de `currency` a la fecha de la operación. */
   fxRate?: number;
+  /**
+   * Moneda base contra la que se registró `fxRate`. Si difiere de la moneda base actual,
+   * `fxRate` se ignora y se usa el tipo de cambio del proveedor.
+   */
+  fxBase?: CurrencyCode;
   /** Fecha ISO 8601 (YYYY-MM-DD o fecha y hora). */
   date: string;
   note?: string;
