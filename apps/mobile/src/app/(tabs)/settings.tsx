@@ -9,7 +9,7 @@ import { Card, Chips, Divider, ListItem, Notice, ProBadge, Row, Screen, Section,
 import { isDemoMode, repository } from '@/data';
 import { useProfile, useUpdateProfile } from '@/hooks/queries';
 import { useFormat } from '@/hooks/useFormat';
-import { LANGUAGES, type LanguageCode } from '@/i18n';
+import { LANGUAGES, numberLocale, type LanguageCode } from '@/i18n';
 import { CurrencyField } from '@/components/CurrencyPicker';
 import { isBillingConfigured } from '@/lib/config';
 import { confirmDestructive } from '@/lib/confirm';
@@ -18,6 +18,10 @@ import { i18nLanguage, setLanguage } from '@/lib/language';
 import { getSupabase } from '@/lib/supabase';
 import { useAppStore, usePlan } from '@/state/app';
 import { spacing, useTheme } from '@/theme';
+
+/** Fecha y commit de la publicación (los completa el workflow al publicar para Expo Go). */
+const BUILD_TIME = process.env.EXPO_PUBLIC_BUILD_TIME;
+const BUILD_COMMIT = process.env.EXPO_PUBLIC_COMMIT ?? '';
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
@@ -179,6 +183,11 @@ export default function SettingsScreen() {
         <Text variant="caption" muted align="center" color={c.muted}>
           {t('settings.version', { version: Constants.expoConfig?.version ?? '0.1.0' })}
         </Text>
+        {BUILD_TIME ? (
+          <Text variant="caption" muted align="center" color={c.muted}>
+            {t('settings.published', { date: new Date(BUILD_TIME).toLocaleString(numberLocale()), commit: BUILD_COMMIT })}
+          </Text>
+        ) : null}
       </Section>
     </Screen>
   );

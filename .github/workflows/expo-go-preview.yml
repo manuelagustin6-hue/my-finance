@@ -83,28 +83,35 @@ jobs:
         working-directory: apps/mobile
         run: |
           MESSAGE="$(git log -1 --pretty=%s | cut -c1-80)"
-          eas update --branch preview --message "$MESSAGE" --non-interactive --json > update.json
+          # Fecha y commit quedan dentro de la app (Ajustes) para saber qué versión se está usando.
+          export EXPO_PUBLIC_BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          export EXPO_PUBLIC_COMMIT="$(git rev-parse --short HEAD)"
+          # El canal "preview" apunta siempre a la última versión: su enlace no cambia entre publicaciones.
+          eas channel:create preview --non-interactive >/dev/null 2>&1 || true
+          eas update --channel preview --message "$MESSAGE" --non-interactive --json > update.json
           cat update.json
 
-      - name: Enlaces para abrir la app
+      - name: Enlace permanente para abrir la app
         if: steps.token.outputs.ready == 'true'
         working-directory: apps/mobile
         run: |
           node -e "
             const fs = require('fs');
             const updates = JSON.parse(fs.readFileSync('update.json', 'utf8'));
-            const group = (Array.isArray(updates) ? updates[0] : updates).group;
+            const first = Array.isArray(updates) ? updates[0] : updates;
+            const runtime = encodeURIComponent(first.runtimeVersion);
             const project = process.env.PROJECT_ID;
+            const link = 'exp://u.expo.dev/' + project + '?channel-name=preview&runtime-version=' + runtime;
             const lines = [
               '## La app está publicada',
               '',
-              '**Opción 1 (la más simple):** abre Expo Go en el iPhone con tu cuenta de Expo; la app aparece en la pestaña *Home* dentro de *Projects*.',
+              '**Enlace permanente (abre siempre la última versión):** cópialo y pégalo en Safari en el iPhone:',
               '',
-              '**Opción 2:** en expo.dev → *Projects* → *my-finance* → *Updates*, abre la última versión y toca *Preview* para abrirla en Expo Go.',
+              '\`' + link + '\`',
               '',
-              '**Opción 3:** enlace directo para Expo Go (cópialo y pégalo en Safari): \`exp://u.expo.dev/update/' + group + '\`',
+              'También puedes abrir Expo Go → *Home* → *Projects* → *my-finance*.',
               '',
-              'Proyecto: ' + project,
+              'Para confirmar la versión: en la app, *Ajustes* → al final aparece la fecha de publicación.',
             ];
             fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
             console.log(lines.join('\n'));

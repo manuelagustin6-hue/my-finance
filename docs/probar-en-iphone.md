@@ -36,12 +36,16 @@ Descarga **Expo Go** desde el App Store.
 
 ## 6. Abrir la app
 
-- **Lo más simple:** abre Expo Go. Con tu cuenta iniciada, la app *my-finance* aparece en *Home → Projects*. Tócala.
-- **Alternativa:** en expo.dev → *Projects* → *my-finance* → *Updates*, abre la última versión y toca *Preview*.
+- **Enlace permanente (recomendado):** al final del resumen de la ejecución del paso 5 hay un enlace que empieza con `exp://u.expo.dev/…?channel-name=preview`. Cópialo, pégalo en la barra de Safari y se abre en Expo Go. Ese enlace **siempre abre la última versión**: guárdalo (por ejemplo, en Notas).
+- **Alternativa:** en Expo Go, *Home → Projects → my-finance* y abre la actualización más reciente.
+
+> No uses enlaces del tipo `exp://u.expo.dev/update/…`: apuntan a una versión fija y siguen abriendo esa versión aunque se publiquen otras.
+
+Para confirmar qué versión estás usando: en la app, *Ajustes* → al final figura la fecha de publicación.
 
 ## Versiones nuevas
 
-Cada vez que se suben cambios a la rama `claude/portfolio-app-mvp`, la app se publica sola. En Expo Go, cierra la app y vuelve a abrirla para recibir la versión nueva.
+Cada vez que se suben cambios a la rama `claude/portfolio-app-mvp`, la app se publica sola. En Expo Go, cierra la app y vuelve a abrirla con el enlace permanente para recibir la versión nueva; en *Ajustes* verás la fecha de publicación actualizada.
 
 ## Si algo falla
 

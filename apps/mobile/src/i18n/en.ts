@@ -365,6 +365,7 @@ const en: Translation = {
     about: 'About',
     disclaimer: 'Information is for reference only and is not financial or tax advice or an investment recommendation.',
     version: 'Version {{version}}',
+    published: 'Published on {{date}} ({{commit}})',
   },
   auth: {
     title: 'Your portfolio, consolidated',

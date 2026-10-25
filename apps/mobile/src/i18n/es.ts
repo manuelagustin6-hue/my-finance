@@ -379,6 +379,7 @@ const es = {
     disclaimer:
       'La información es orientativa y no constituye asesoramiento financiero, impositivo ni una recomendación de inversión.',
     version: 'Versión {{version}}',
+    published: 'Publicada el {{date}} ({{commit}})',
   },
   auth: {
     title: 'Tu portafolio, consolidado',

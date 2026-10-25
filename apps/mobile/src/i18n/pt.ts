@@ -366,6 +366,7 @@ const pt: Translation = {
     disclaimer:
       'As informações são apenas orientativas e não constituem aconselhamento financeiro ou tributário nem recomendação de investimento.',
     version: 'Versão {{version}}',
+    published: 'Publicada em {{date}} ({{commit}})',
   },
   auth: {
     title: 'Sua carteira, consolidada',
