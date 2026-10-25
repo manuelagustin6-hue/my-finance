@@ -9,11 +9,13 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.myfinance.app",
-      "config": { "usesNonExemptEncryption": false }
+      "bundleIdentifier": "com.manuelagustin.myfinance",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
-      "package": "com.myfinance.app",
+      "package": "com.manuelagustin.myfinance",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -26,9 +28,16 @@
       "favicon": "./assets/favicon.png",
       "output": "single"
     },
-    "plugins": ["expo-router", "expo-localization", "expo-sharing"],
+    "plugins": [
+      "expo-router",
+      "expo-localization",
+      "expo-sharing"
+    ],
     "experiments": {
       "typedRoutes": false
+    },
+    "runtimeVersion": {
+      "policy": "sdkVersion"
     }
   }
 }

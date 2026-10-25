@@ -1,0 +1,114 @@
+# Publica la app como "update" de EAS para abrirla en Expo Go (iPhone o Android),
+# sin computadora y sin cuenta de Apple Developer. Requiere el secreto EXPO_TOKEN.
+# Guía: docs/probar-en-iphone.md
+name: Probar en Expo Go
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/portfolio-app-mvp]
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/core/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/expo-go-preview.yml'
+
+concurrency:
+  group: expo-go-preview
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Pruebas del motor de cálculo
+        run: pnpm --filter @my-finance/core test
+
+      - name: Verificación de tipos
+        run: pnpm -r typecheck
+
+      - name: Linter
+        run: pnpm --filter mobile lint
+
+      - name: Verificar el token de Expo
+        id: token
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::warning::Falta el secreto EXPO_TOKEN. Sigue docs/probar-en-iphone.md para crearlo; mientras tanto no se publica la app."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configurar EAS
+        if: steps.token.outputs.ready == 'true'
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Vincular el proyecto con la cuenta de Expo
+        if: steps.token.outputs.ready == 'true'
+        working-directory: apps/mobile
+        run: |
+          eas init --non-interactive --force
+          # Expo Go descarga la app desde la URL de updates del proyecto.
+          node -e "
+            const fs = require('fs');
+            const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+            const id = app.expo.extra?.eas?.projectId;
+            if (!id) { console.error('No se obtuvo el projectId de EAS'); process.exit(1); }
+            app.expo.updates = { ...app.expo.updates, url: 'https://u.expo.dev/' + id };
+            fs.writeFileSync('app.json', JSON.stringify(app, null, 2));
+            fs.appendFileSync(process.env.GITHUB_ENV, 'PROJECT_ID=' + id + '\n');
+          "
+          echo "EXPO_OWNER=$(eas whoami | head -n 1)" >> "$GITHUB_ENV"
+
+      - name: Publicar la versión para Expo Go
+        if: steps.token.outputs.ready == 'true'
+        working-directory: apps/mobile
+        run: |
+          MESSAGE="$(git log -1 --pretty=%s | cut -c1-80)"
+          eas update --branch preview --message "$MESSAGE" --non-interactive --json > update.json
+          cat update.json
+
+      - name: Enlaces para abrir la app
+        if: steps.token.outputs.ready == 'true'
+        working-directory: apps/mobile
+        run: |
+          node -e "
+            const fs = require('fs');
+            const updates = JSON.parse(fs.readFileSync('update.json', 'utf8'));
+            const group = (Array.isArray(updates) ? updates[0] : updates).group;
+            const owner = process.env.EXPO_OWNER;
+            const project = process.env.PROJECT_ID;
+            const page = 'https://expo.dev/accounts/' + owner + '/projects/my-finance/updates/' + group;
+            const lines = [
+              '## La app está publicada',
+              '',
+              '**Opción 1 (la más simple):** abre Expo Go en el iPhone con tu cuenta de Expo; la app aparece en la pestaña *Home* dentro de *Projects*.',
+              '',
+              '**Opción 2:** abre esta página desde el iPhone y toca *Preview* / *Open with Expo Go*: ' + page,
+              '',
+              '**Opción 3:** enlace directo para Expo Go: \`exp://u.expo.dev/update/' + group + '\`',
+              '',
+              'Proyecto: ' + project,
+            ];
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
+            console.log(lines.join('\n'));
+          "

@@ -76,6 +76,10 @@ pnpm --filter mobile start      # abre Expo (iOS, Android o web)
 
 ### Abrirla en el celular
 
+**Sin computadora (recomendado):** seguir [docs/probar-en-iphone.md](docs/probar-en-iphone.md). La app se publica desde GitHub Actions y se abre con Expo Go; no requiere cuenta de Apple Developer.
+
+**Con computadora:**
+
 1. Instalar **Expo Go** desde App Store o Google Play.
 2. En una computadora: instalar [Node.js 22](https://nodejs.org) y luego `npm install -g pnpm`.
 3. Descargar el proyecto y arrancarlo:
