@@ -1,4 +1,4 @@
-import { calculateFee, platformById, WALLET_TYPES, type Wallet, type WalletType } from '@my-finance/core';
+import { calculateFee, platformById, platformWebUrl, WALLET_TYPES, type Wallet, type WalletType } from '@my-finance/core';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -160,6 +160,36 @@ function WalletForm({ id, existing }: { id: string; existing?: Wallet }) {
               small
               icon="flag-outline"
               onPress={() => router.push({ pathname: '/opening', params: { walletId: id } })}
+            />
+          </Card>
+        </Section>
+      ) : null}
+
+      {!isNew && chosen ? (
+        <Section title={t('brokerWeb.walletTitle')}>
+          <Card style={{ gap: spacing.sm }}>
+            <Button
+              title={platform ? t('brokerWeb.walletFromWeb', { name: platform.name }) : t('importer.fromWebGeneric')}
+              small
+              icon="globe-outline"
+              onPress={() =>
+                router.push({
+                  pathname: '/broker-web',
+                  params: {
+                    walletId: id,
+                    name: platform?.name ?? name,
+                    next: 'import',
+                    ...(platform ? { url: platformWebUrl(platform) } : {}),
+                  },
+                })
+              }
+            />
+            <Button
+              title={t('brokerWeb.walletFromFile')}
+              variant="secondary"
+              small
+              icon="document-attach-outline"
+              onPress={() => router.push({ pathname: '/import', params: { walletId: id } })}
             />
           </Card>
         </Section>

@@ -13,6 +13,8 @@ export interface Platform {
   domain: string;
   /** Otros nombres con los que se la busca. */
   aliases?: readonly string[];
+  /** Página de ingreso, cuando no es la portada del dominio. */
+  webUrl?: string;
 }
 
 const G: readonly string[] = [];
@@ -59,11 +61,11 @@ export const PLATFORMS: readonly Platform[] = [
   { id: 'hapi', name: 'Hapi', type: 'broker', countries: ['AR', 'CO', 'MX', 'PE', 'CL', 'UY'], currency: 'USD', domain: 'hapi.trade' },
 
   // Argentina
-  { id: 'iol', name: 'InvertirOnline', type: 'broker', countries: ['AR'], currency: 'ARS', domain: 'invertironline.com', aliases: ['IOL'] },
+  { id: 'iol', name: 'InvertirOnline', type: 'broker', countries: ['AR'], currency: 'ARS', domain: 'invertironline.com', aliases: ['IOL'], webUrl: 'https://micuenta.invertironline.com/ingresar' },
   { id: 'balanz', name: 'Balanz', type: 'broker', countries: ['AR', 'UY'], currency: 'ARS', domain: 'balanz.com' },
   { id: 'bullmarket', name: 'Bull Market Brokers', type: 'broker', countries: ['AR'], currency: 'ARS', domain: 'bullmarketbrokers.com', aliases: ['Bull Market'] },
   { id: 'ppi', name: 'Portfolio Personal Inversiones', type: 'broker', countries: ['AR'], currency: 'ARS', domain: 'portfoliopersonal.com', aliases: ['PPI'] },
-  { id: 'cocos', name: 'Cocos Capital', type: 'broker', countries: ['AR'], currency: 'ARS', domain: 'cocos.capital', aliases: ['Cocos'] },
+  { id: 'cocos', name: 'Cocos Capital', type: 'broker', countries: ['AR'], currency: 'ARS', domain: 'cocos.capital', aliases: ['Cocos'], webUrl: 'https://app.cocos.capital' },
   { id: 'allaria', name: 'Allaria', type: 'broker', countries: ['AR'], currency: 'ARS', domain: 'allaria.com.ar' },
   { id: 'inviu', name: 'Inviu', type: 'broker', countries: ['AR'], currency: 'ARS', domain: 'inviu.com.ar' },
   { id: 'ieb', name: 'IEB+', type: 'broker', countries: ['AR'], currency: 'ARS', domain: 'iebmas.com.ar', aliases: ['Invertir en Bolsa'] },
@@ -153,4 +155,30 @@ export function platformById(id: string | undefined): Platform | undefined {
 /** Ícono de la plataforma (favicon de su sitio). */
 export function platformLogoUrl(platform: Pick<Platform, 'domain'>): string {
   return `https://www.google.com/s2/favicons?domain=${platform.domain}&sz=128`;
+}
+
+/** Dirección donde el usuario inicia sesión en la plataforma. */
+export function platformWebUrl(platform: Pick<Platform, 'domain' | 'webUrl'>): string {
+  return platform.webUrl ?? `https://${platform.domain}`;
+}
+
+/**
+ * Normaliza una dirección escrita por el usuario: agrega `https://` y pasa `http` a `https`.
+ * Devuelve undefined si no es una dirección web válida.
+ */
+export function normalizeWebUrl(input: string): string | undefined {
+  const text = input.trim();
+  if (!text || /\s/.test(text)) return undefined;
+  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(text) ? text : `https://${text}`;
+  const match = /^(https?):\/\/([^/?#]+)(.*)$/i.exec(withScheme);
+  if (!match) return undefined;
+  const host = match[2]!.toLowerCase();
+  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?$/.test(host)) return undefined;
+  return `https://${host}${match[3] ?? ''}`;
+}
+
+/** Dominio (sin `www.`) de una dirección, para mostrarlo en la barra del navegador. */
+export function urlHost(url: string): string {
+  const host = /^[a-z]+:\/\/([^/?#:]+)/i.exec(url)?.[1] ?? '';
+  return host.replace(/^www\./i, '').toLowerCase();
 }

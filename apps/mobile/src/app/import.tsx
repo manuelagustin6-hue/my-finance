@@ -6,6 +6,8 @@ import {
   isBeforeOpening,
   isSmartResult,
   missingHoldings,
+  platformById,
+  platformWebUrl,
   parseCsv,
   detectSmartMapping,
   transactionFingerprint,
@@ -19,7 +21,7 @@ import {
 } from '@my-finance/core';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
-import { router } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, View } from 'react-native';
@@ -27,9 +29,11 @@ import { Button, Card, Chips, Divider, Field, Notice, Row, Screen, Section, Text
 import { isPlanLimitError, market, repository, type NewTransaction } from '@/data';
 import { useImports, useInvalidateUserData, usePortfolio } from '@/hooks/queries';
 import { useFormat } from '@/hooks/useFormat';
+import { sheetBytesToCsv, UnsupportedSheetError } from '@/import/readSheet';
 import { shareTextFile } from '@/lib/exporter';
 import { loadImportActions, saveImportActions } from '@/lib/importMemory';
 import { usePlan } from '@/state/app';
+import { usePendingImport } from '@/state/pendingImport';
 import { spacing, useTheme } from '@/theme';
 
 type AssetResolution =
@@ -56,8 +60,8 @@ const ROLES: ColumnRole[] = ['date', 'type', 'symbol', 'instrument', 'quantity',
 const keyOf = (row: Pick<ImportedRow, 'symbol' | 'assetType'>) => `${row.symbol}|${row.assetType ?? ''}`;
 
 async function readFile(asset: DocumentPicker.DocumentPickerAsset): Promise<string> {
-  if (Platform.OS === 'web') return (await fetch(asset.uri)).text();
-  return new File(asset.uri).text();
+  const bytes = Platform.OS === 'web' ? new Uint8Array(await (await fetch(asset.uri)).arrayBuffer()) : await new File(asset.uri).bytes();
+  return sheetBytesToCsv(bytes);
 }
 
 export default function ImportScreen() {
@@ -68,13 +72,15 @@ export default function ImportScreen() {
   const p = usePortfolio();
   const imports = useImports();
   const invalidate = useInvalidateUserData();
-  const [walletId, setWalletId] = useState<string | undefined>();
+  const params = useLocalSearchParams<{ walletId?: string }>();
+  const [walletId, setWalletId] = useState<string | undefined>(params.walletId);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [pasted, setPasted] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ text: string; tone: 'info' | 'warning' } | null>(null);
 
-  const wallet = p.wallets.find((w) => w.id === (walletId ?? p.wallets[0]?.id));
+  const wallet = p.wallets.find((w) => w.id === walletId) ?? p.wallets[0];
+  const platform = platformById(wallet?.platformId);
 
   /** Vincula cada símbolo con un activo propio, uno del catálogo o uno personalizado nuevo. */
   async function resolveAssets(rows: ImportedRow[]): Promise<Map<string, AssetResolution>> {
@@ -148,17 +154,44 @@ export default function ImportScreen() {
     try {
       const file = await load();
       if (file) await analyze(file.text, file.name);
-    } catch {
-      setMessage({ text: t('importer.readError'), tone: 'warning' });
+    } catch (error) {
+      setMessage({ text: t(error instanceof UnsupportedSheetError ? 'importer.xlsBinary' : 'importer.readError'), tone: 'warning' });
     } finally {
       setBusy(false);
     }
   };
 
+  // Archivo capturado en la web del broker: se analiza al volver a esta pantalla. Sin memoizar a
+  // propósito, para usar los datos actuales de la cartera; `take` lo entrega una sola vez.
+  useFocusEffect(() => {
+    if (p.isLoading || p.wallets.length === 0 || busy) return; // espera a que cargue la cartera
+    const file = usePendingImport.getState().take();
+    if (!file) return;
+    void run(async () => ({ text: sheetBytesToCsv(file.bytes), name: file.name }));
+  });
+
+  const openBrokerWeb = () =>
+    router.push({
+      pathname: '/broker-web',
+      params: {
+        walletId: wallet?.id ?? '',
+        name: platform?.name ?? wallet?.name ?? '',
+        ...(platform ? { url: platformWebUrl(platform) } : {}),
+      },
+    });
+
   const pickFile = () =>
     run(async () => {
       const picked = await DocumentPicker.getDocumentAsync({
-        type: ['text/csv', 'text/comma-separated-values', 'text/plain', 'application/vnd.ms-excel', '*/*'],
+        type: [
+          'text/csv',
+          'text/comma-separated-values',
+          'text/plain',
+          'text/html',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          '*/*',
+        ],
         copyToCacheDirectory: true,
       });
       if (picked.canceled || !picked.assets[0]) return null;
@@ -274,7 +307,19 @@ export default function ImportScreen() {
           setAnalysis(null);
         }}
       />
-      <Button title={t('importer.chooseFile')} icon="document-attach-outline" onPress={pickFile} loading={busy && !analysis} />
+      <Button
+        title={platform ? t('importer.fromWeb', { name: platform.name }) : t('importer.fromWebGeneric')}
+        icon="globe-outline"
+        onPress={openBrokerWeb}
+        disabled={busy}
+      />
+      <Button
+        title={t('importer.chooseFile')}
+        icon="document-attach-outline"
+        variant="secondary"
+        onPress={pickFile}
+        loading={busy && !analysis}
+      />
 
       {!analysis ? (
         <Card style={{ gap: spacing.sm }}>

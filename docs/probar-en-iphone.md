@@ -47,6 +47,16 @@ Para confirmar qué versión estás usando: en la app, *Ajustes* → al final fi
 
 Cada vez que se suben cambios a la rama `claude/portfolio-app-mvp`, la app se publica sola. En Expo Go, cierra la app y vuelve a abrirla con el enlace permanente para recibir la versión nueva; en *Ajustes* verás la fecha de publicación actualizada.
 
+## Importar desde la web de tu broker
+
+1. En *Billeteras*, abre tu billetera y toca **Desde la web de {plataforma}** (o, en *Importar historial*, **Abrir la web de…**).
+2. Se abre la web real de la plataforma dentro de la app. Arriba se ve el dominio con un candado: verifica que sea el sitio correcto.
+3. Inicia sesión como siempre (usuario, contraseña y código de verificación). La app no ve ni guarda esos datos, y al cerrar se borra la sesión.
+4. Ve a *Movimientos*, *Actividad* o *Historial* y toca **Exportar** o **Descargar** (CSV o Excel).
+5. La app toma el archivo y vuelve al importador con la vista previa: revisa y toca **Importar**.
+
+Si la descarga no se captura (algunos sitios en Android guardan el archivo directo en el teléfono), vuelve y elígelo con **Elegir archivo (CSV o Excel)**.
+
 ## Si algo falla
 
 - **El workflow termina con un aviso "Falta el secreto EXPO_TOKEN":** revisa el paso 4 (el nombre debe ser exactamente `EXPO_TOKEN`).

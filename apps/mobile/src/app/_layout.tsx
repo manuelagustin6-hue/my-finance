@@ -51,6 +51,7 @@ function RootNavigator() {
         <Stack.Screen name="analytics" options={{ title: t('analytics.title') }} />
         <Stack.Screen name="transactions" options={{ title: t('tx.history') }} />
         <Stack.Screen name="fx" options={{ title: t('fx.title') }} />
+        <Stack.Screen name="broker-web" options={{ title: t('brokerWeb.title'), presentation: 'fullScreenModal' }} />
         <Stack.Screen name="opening" options={{ title: t('opening.title'), presentation: 'modal' }} />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>

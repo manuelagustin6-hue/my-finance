@@ -8,6 +8,7 @@ export * from './format.ts';
 export * from './csv/parse.ts';
 export * from './csv/templates.ts';
 export * from './csv/smart.ts';
+export * from './csv/sheets.ts';
 export * from './market/provider.ts';
 export * from './market/catalog.ts';
 export * from './market/mock.ts';

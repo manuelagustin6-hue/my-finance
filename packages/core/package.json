@@ -9,6 +9,7 @@
     "test": "vitest run"
   },
   "devDependencies": {
+    "fflate": "^0.8.3",
     "typescript": "~5.9.0",
     "vitest": "^3.2.0"
   }
