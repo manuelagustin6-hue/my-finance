@@ -3,9 +3,13 @@ import {
   canAddAsset,
   canAddWallet,
   canImport,
+  canViewHistory,
   hasFeature,
   MockMarketDataProvider,
   formatPercent,
+  logoCandidates,
+  flagEmoji,
+  assetFlag,
 } from '../src/index.ts';
 
 describe('planes', () => {
@@ -21,6 +25,12 @@ describe('planes', () => {
 
     expect(canImport('free', 0).allowed).toBe(true);
     expect(canImport('free', 1).allowed).toBe(false);
+  });
+
+  it('el plan Gratis ve hasta un año de historia y Pro todo', () => {
+    for (const r of ['1M', '3M', '1Y'] as const) expect(canViewHistory('free', r)).toBe(true);
+    for (const r of ['5Y', 'MAX'] as const) expect(canViewHistory('free', r)).toBe(false);
+    for (const r of ['1M', '3M', '1Y', '5Y', 'MAX'] as const) expect(canViewHistory('pro', r)).toBe(true);
   });
 
   it('habilita funciones de análisis solo en Pro', () => {
@@ -81,5 +91,35 @@ describe('formato', () => {
   it('porcentajes con signo', () => {
     expect(formatPercent(0.1234, 'en-US')).toBe('+12.34%');
     expect(formatPercent(-0.05, 'en-US')).toBe('-5.00%');
+  });
+});
+
+describe('logos', () => {
+  it('cripto: íconos públicos por símbolo', () => {
+    const urls = logoCandidates({ symbol: 'BTC', type: 'crypto' });
+    expect(urls[0]).toContain('/128/color/btc.png');
+    expect(urls).toHaveLength(2);
+  });
+
+  it('acciones: ticker con sufijo de bolsa, ticker solo y sitio del emisor', () => {
+    expect(logoCandidates({ symbol: 'GGAL', type: 'stock', exchange: 'BYMA' })).toEqual([
+      'https://financialmodelingprep.com/image-stock/GGAL.BA.png',
+      'https://financialmodelingprep.com/image-stock/GGAL.png',
+      'https://www.google.com/s2/favicons?domain=gfgsa.com&sz=128',
+    ]);
+    expect(logoCandidates({ symbol: 'AAPL', type: 'stock', exchange: 'NASDAQ' })[0]).toBe(
+      'https://financialmodelingprep.com/image-stock/AAPL.png',
+    );
+  });
+
+  it('el logo del proveedor tiene prioridad', () => {
+    expect(logoCandidates({ symbol: 'X', type: 'stock', logoUrl: 'https://p/x.png' })[0]).toBe('https://p/x.png');
+  });
+
+  it('bonos y efectivo usan la bandera', () => {
+    expect(flagEmoji('AR')).toBe('🇦🇷');
+    expect(assetFlag({ symbol: 'AL30', type: 'bond', country: 'AR' })).toBe('🇦🇷');
+    expect(assetFlag({ symbol: 'EUR', type: 'cash' })).toBe('🇪🇺');
+    expect(assetFlag({ symbol: 'AAPL', type: 'stock', country: 'US' })).toBeUndefined();
   });
 });

@@ -2,8 +2,7 @@ import {
   assetStats,
   averageCost,
   hasFeature,
-  PLANS,
-  RANGE_DAYS,
+  canViewHistory,
   type Asset,
   type AssetRef,
   type AssetSearchResult,
@@ -16,6 +15,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking, ScrollView, View } from 'react-native';
+import { AssetLogo } from '@/components/AssetLogo';
 import { LineChart } from '@/components/charts';
 import {
   Button,
@@ -106,7 +106,7 @@ export default function AssetScreen() {
   const closed = owned ? portfolio.summary?.closedPositions.find((p) => p.assetId === owned.id) : undefined;
   const myTxs = owned ? portfolio.transactions.filter((tx) => tx.assetId === owned.id).reverse() : [];
   const base = portfolio.base ?? 'USD';
-  const rangeLocked = RANGE_DAYS[range] > PLANS[plan].maxHistoryDays;
+  const rangeLocked = !canViewHistory(plan, range);
 
   const addTx = () =>
     router.push({
@@ -117,12 +117,15 @@ export default function AssetScreen() {
   return (
     <Screen>
       <Stack.Screen options={{ title: info.symbol }} />
-      <View style={{ gap: spacing.xs }}>
-        <Text variant="heading">{info.name}</Text>
-        <Text muted>
-          {[t(`assetTypes.${info.type}`), info.exchange, currency].filter(Boolean).join(' · ')}
-        </Text>
-      </View>
+      <Row gap={spacing.md}>
+        <AssetLogo asset={info} size={48} />
+        <View style={{ gap: spacing.xs, flex: 1 }}>
+          <Text variant="heading">{info.name}</Text>
+          <Text muted>
+            {[t(`assetTypes.${info.type}`), info.exchange, currency].filter(Boolean).join(' · ')}
+          </Text>
+        </View>
+      </Row>
 
       <Card style={{ gap: spacing.md }}>
         <Row style={{ justifyContent: 'space-between', alignItems: 'flex-end' }}>

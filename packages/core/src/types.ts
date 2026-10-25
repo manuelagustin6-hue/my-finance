@@ -19,6 +19,8 @@ export interface Asset {
   providerId?: string;
   /** Precio cargado a mano (bonos u otros activos sin cotización automática). */
   manualPrice?: number;
+  /** Logo informado por el proveedor de datos. */
+  logoUrl?: string;
 }
 
 export type WalletType = 'exchange' | 'broker' | 'bank' | 'self_custody' | 'other';

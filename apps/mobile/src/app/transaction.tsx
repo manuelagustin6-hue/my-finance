@@ -12,7 +12,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
-import { AssetAvatar } from '@/components/PositionRow';
+import { AssetLogo } from '@/components/AssetLogo';
 import { Button, Card, Chips, Divider, Field, ListItem, Loading, Notice, Row, Screen, Text } from '@/components/ui';
 import { isPlanLimitError, market, repository } from '@/data';
 import { useDeleteTransaction, useFxHistory, usePortfolio, useSaveTransactions, useSearch } from '@/hooks/queries';
@@ -223,7 +223,7 @@ function TransactionForm({ params }: { params: Params }) {
         {info ? (
           <Card>
             <ListItem
-              leading={<AssetAvatar symbol={info.symbol} />}
+              leading={<AssetLogo asset={info} />}
               title={`${info.symbol} · ${info.name}`}
               subtitle={`${t(`assetTypes.${info.type}`)} · ${info.currency}`}
             />
@@ -253,7 +253,7 @@ function TransactionForm({ params }: { params: Params }) {
             {ownedResults.map((a) => (
               <ListItem
                 key={a.id}
-                leading={<AssetAvatar symbol={a.symbol} />}
+                leading={<AssetLogo asset={a} />}
                 title={`${a.symbol} · ${a.name}`}
                 subtitle={t(`assetTypes.${a.type}`)}
                 onPress={() => {
@@ -268,7 +268,7 @@ function TransactionForm({ params }: { params: Params }) {
               .map((r) => (
                 <ListItem
                   key={`${r.type}:${r.providerId}`}
-                  leading={<AssetAvatar symbol={r.symbol} index={1} />}
+                  leading={<AssetLogo asset={r} index={1} />}
                   title={`${r.symbol} · ${r.name}`}
                   subtitle={[t(`assetTypes.${r.type}`), r.exchange, r.currency].filter(Boolean).join(' · ')}
                   onPress={() => {

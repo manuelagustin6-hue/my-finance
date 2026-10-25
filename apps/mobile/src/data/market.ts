@@ -7,8 +7,7 @@ import {
   type FxPreferences,
   type FxSnapshot,
   type UsdRates,
-  PLANS,
-  RANGE_DAYS,
+  canViewHistory,
   type AssetRef,
   type AssetSearchResult,
   type Feature,
@@ -62,7 +61,7 @@ export class LocalMarketClient implements MarketClient {
   }
 
   history(asset: AssetRef, range: HistoryRange) {
-    if (RANGE_DAYS[range] > PLANS[this.plan()].maxHistoryDays) {
+    if (!canViewHistory(this.plan(), range)) {
       return Promise.reject(new ProRequiredError('full_price_history'));
     }
     return this.provider.getHistory(asset, range);

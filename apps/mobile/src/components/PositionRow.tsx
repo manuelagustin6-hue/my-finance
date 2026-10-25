@@ -1,32 +1,9 @@
 import type { Asset, ValuedPosition } from '@my-finance/core';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { View } from 'react-native';
 import { useFormat } from '@/hooks/useFormat';
-import { useTheme } from '@/theme';
-import { ListItem, Text } from './ui';
-
-/** Iniciales del activo en un círculo, como ícono liviano. */
-export function AssetAvatar({ symbol, index = 0 }: { symbol: string; index?: number }) {
-  const c = useTheme();
-  const color = c.series[index % c.series.length]!;
-  return (
-    <View
-      style={{
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: `${color}22`,
-      }}
-    >
-      <Text style={{ fontWeight: '700', fontSize: 12 }} color={color}>
-        {symbol.slice(0, 4)}
-      </Text>
-    </View>
-  );
-}
+import { AssetLogo } from './AssetLogo';
+import { ListItem } from './ui';
 
 export function PositionRow({
   position,
@@ -47,7 +24,7 @@ export function PositionRow({
     : t('positions.noQuote');
   return (
     <ListItem
-      leading={<AssetAvatar symbol={symbol} index={index} />}
+      leading={<AssetLogo asset={asset ?? { symbol, type: 'other' }} index={index} />}
       title={asset ? `${asset.symbol} · ${asset.name}` : symbol}
       subtitle={subtitle}
       right={f.money(position.marketValueBase, base)}

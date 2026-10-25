@@ -3,10 +3,11 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
-import { AssetAvatar } from '@/components/PositionRow';
+import { AssetLogo } from '@/components/AssetLogo';
 import { Button, Card, Divider, Field, ListItem, Loading, Notice, Screen, Section, Text } from '@/components/ui';
 import { isDemoMode } from '@/data';
-import { useSearch } from '@/hooks/queries';
+import { useQuotes, useSearch } from '@/hooks/queries';
+import { useFormat } from '@/hooks/useFormat';
 import { searchResultHref } from '@/lib/routes';
 import { spacing } from '@/theme';
 
@@ -23,19 +24,29 @@ function useDebounced<T>(value: T, delay = 300): T {
 
 function ResultList({ results }: { results: AssetSearchResult[] }) {
   const { t } = useTranslation();
+  const f = useFormat();
+  const quotes = useQuotes(results.map((r) => ({ providerId: r.providerId, type: r.type })));
+  const byId = new Map((quotes.data ?? []).map((q) => [q.assetId, q]));
   return (
     <Card style={{ paddingVertical: spacing.xs }}>
-      {results.map((r, i) => (
-        <View key={`${r.type}:${r.providerId}`}>
-          {i > 0 ? <Divider /> : null}
-          <ListItem
-            leading={<AssetAvatar symbol={r.symbol} index={i} />}
-            title={`${r.symbol} · ${r.name}`}
-            subtitle={[t(`assetTypes.${r.type}`), r.exchange, r.currency].filter(Boolean).join(' · ')}
-            onPress={() => router.push(searchResultHref(r))}
-          />
-        </View>
-      ))}
+      {results.map((r, i) => {
+        const q = byId.get(r.providerId);
+        const change = q?.previousClose ? q.price / q.previousClose - 1 : undefined;
+        return (
+          <View key={`${r.type}:${r.providerId}`}>
+            {i > 0 ? <Divider /> : null}
+            <ListItem
+              leading={<AssetLogo asset={r} index={i} />}
+              title={`${r.symbol} · ${r.name}`}
+              subtitle={[t(`assetTypes.${r.type}`), r.exchange].filter(Boolean).join(' · ')}
+              right={q ? f.money(q.price, q.currency) : undefined}
+              rightSub={change !== undefined ? f.pct(change) : undefined}
+              rightSubColor={change !== undefined ? f.tone(change) : undefined}
+              onPress={() => router.push(searchResultHref(r))}
+            />
+          </View>
+        );
+      })}
     </Card>
   );
 }

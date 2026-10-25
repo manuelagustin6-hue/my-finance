@@ -1,3 +1,5 @@
+import type { HistoryRange } from './market/provider.ts';
+
 /** Planes de la app y sus límites. Es la única fuente de verdad: la usan la app y el servidor. */
 export type PlanId = 'free' | 'pro';
 
@@ -12,8 +14,8 @@ export interface PlanLimits {
   maxWallets: number;
   maxAssets: number;
   maxImports: number;
-  /** Días máximos de historia de precios consultables. */
-  maxHistoryDays: number;
+  /** Rangos de historia de precios que se pueden consultar. */
+  historyRanges: readonly HistoryRange[];
   features: readonly Feature[];
 }
 
@@ -22,14 +24,14 @@ export const PLANS: Record<PlanId, PlanLimits> = {
     maxWallets: 2,
     maxAssets: 15,
     maxImports: 1,
-    maxHistoryDays: 365,
+    historyRanges: ['1M', '3M', '1Y'],
     features: [],
   },
   pro: {
     maxWallets: Infinity,
     maxAssets: Infinity,
     maxImports: Infinity,
-    maxHistoryDays: Infinity,
+    historyRanges: ['1M', '3M', '1Y', '5Y', 'MAX'],
     features: ['portfolio_analytics', 'fundamentals', 'full_price_history', 'unlimited_imports', 'export_data'],
   },
 };
@@ -39,6 +41,10 @@ export const PRO_ENTITLEMENT = 'pro';
 
 export function hasFeature(plan: PlanId, feature: Feature): boolean {
   return PLANS[plan].features.includes(feature);
+}
+
+export function canViewHistory(plan: PlanId, range: HistoryRange): boolean {
+  return PLANS[plan].historyRanges.includes(range);
 }
 
 export type LimitCheck = { allowed: true } | { allowed: false; limit: number; reason: 'wallets' | 'assets' | 'imports' };

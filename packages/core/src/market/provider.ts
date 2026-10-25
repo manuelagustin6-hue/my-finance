@@ -14,6 +14,8 @@ export interface AssetSearchResult {
   currency: CurrencyCode;
   exchange?: string;
   country?: string;
+  /** Logo informado por el proveedor de datos. */
+  logoUrl?: string;
 }
 
 export type HistoryRange = '1M' | '3M' | '1Y' | '5Y' | 'MAX';

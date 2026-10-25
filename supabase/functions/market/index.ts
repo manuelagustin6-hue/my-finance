@@ -1,13 +1,12 @@
 // Edge Function: datos de mercado (búsqueda, cotizaciones, historia, fundamentales, tipos de cambio).
 // Oculta las claves de los proveedores, aplica los límites del plan y cachea cotizaciones.
 import {
+  canViewHistory,
   hasFeature,
   MockMarketDataProvider,
   PublicFxProvider,
   type FxCache,
   type FxPreferences,
-  PLANS,
-  RANGE_DAYS,
   type AssetRef,
   type HistoryRange,
   type MarketDataProvider,
@@ -126,7 +125,7 @@ Deno.serve(async (req) => {
 
       case 'history': {
         const plan = await planOf(userId);
-        if (RANGE_DAYS[body.range] > PLANS[plan].maxHistoryDays) {
+        if (!canViewHistory(plan, body.range)) {
           return json({ error: 'PRO_REQUIRED', feature: 'full_price_history' }, 402);
         }
         return json(await provider.getHistory(body.asset, body.range));
