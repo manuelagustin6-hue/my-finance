@@ -23,6 +23,7 @@ function toWallet(r: Row): Wallet {
   return {
     id: String(r.id),
     name: String(r.name),
+    platformId: optStr(r.platform_id),
     type: r.type as Wallet['type'],
     currency: String(r.currency),
     fees: { percent: num(r.fee_percent), fixed: num(r.fee_fixed), minimum: num(r.fee_minimum) },
@@ -158,6 +159,7 @@ export class SupabaseRepository implements Repository {
   async saveWallet(w: NewWallet): Promise<Wallet> {
     const row = {
       name: w.name,
+      platform_id: w.platformId ?? null,
       type: w.type,
       currency: w.currency,
       fee_percent: w.fees.percent,

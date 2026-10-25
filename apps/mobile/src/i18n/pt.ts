@@ -119,6 +119,13 @@ const pt: Translation = {
     dayChange: 'Variação diária',
   },
   wallets: {
+    platform: 'Plataforma',
+    platformSearch: 'Busque sua exchange, corretora, banco ou carteira',
+    suggested: 'Sugeridas',
+    createCustom: 'Criar “{{name}}” manualmente',
+    customPlatform: 'Plataforma personalizada',
+    alias: 'Nome no app',
+    aliasHelp: 'Você pode alterá-lo, por exemplo “Binance reserva”.',
     new: 'Nova carteira',
     edit: 'Editar carteira',
     name: 'Nome',

@@ -117,7 +117,12 @@ export default function AnalyticsScreen() {
           </Text>
           {analysis && analysis.points.length > 1 ? (
             <>
-              <LineChart values={analysis.points.map((x) => x.value)} baseline={analysis.points.map((x) => x.netInvested)} />
+              <LineChart
+                values={analysis.points.map((x) => x.value)}
+                dates={analysis.points.map((x) => x.date)}
+                baseline={analysis.points.map((x) => x.netInvested)}
+                formatValue={(v) => f.money(v, base)}
+              />
               <Text variant="caption" muted>
                 — {t('positions.value')} · - - {t('analytics.netInvested')}
               </Text>

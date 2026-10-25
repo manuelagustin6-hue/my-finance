@@ -43,6 +43,8 @@ export interface FeeSchedule {
 export interface Wallet {
   id: string;
   name: string;
+  /** Plataforma del catálogo (Binance, IOL…); vacío si la creó el usuario a mano. */
+  platformId?: string;
   type: WalletType;
   /** Moneda principal de la billetera. */
   currency: CurrencyCode;

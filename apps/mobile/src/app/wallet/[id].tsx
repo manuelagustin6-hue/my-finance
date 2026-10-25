@@ -1,9 +1,10 @@
-import { calculateFee, WALLET_TYPES, type Wallet, type WalletType } from '@my-finance/core';
+import { calculateFee, platformById, WALLET_TYPES, type Wallet, type WalletType } from '@my-finance/core';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { CurrencyField } from '@/components/CurrencyPicker';
+import { PlatformSearch, SelectedPlatform, type PlatformChoice } from '@/components/PlatformPicker';
 import { PositionRow } from '@/components/PositionRow';
 import { Button, Card, Chips, Divider, Field, Loading, Row, Screen, Section, Text } from '@/components/ui';
 import { isPlanLimitError } from '@/data';
@@ -32,6 +33,23 @@ function WalletForm({ id, existing }: { id: string; existing?: Wallet }) {
   const portfolio = usePortfolio(isNew ? '__none__' : id);
 
   const [name, setName] = useState(existing?.name ?? '');
+  const [platformId, setPlatformId] = useState<string | undefined>(existing?.platformId);
+  /** En una billetera nueva, primero se elige la plataforma (o se crea a mano). */
+  const [chosen, setChosen] = useState(!isNew);
+  const platform = platformById(platformId);
+
+  const choose = (choice: PlatformChoice) => {
+    if (choice.kind === 'platform') {
+      setPlatformId(choice.platform.id);
+      setName(choice.platform.name);
+      setType(choice.platform.type);
+      setCurrency(choice.platform.currency);
+    } else {
+      setPlatformId(undefined);
+      setName(choice.name);
+    }
+    setChosen(true);
+  };
   const [type, setType] = useState<WalletType>(existing?.type ?? 'exchange');
   const [currency, setCurrency] = useState(existing?.currency ?? 'USD');
   const [percent, setPercent] = useState(asText(existing?.fees.percent ?? 0));
@@ -58,7 +76,7 @@ function WalletForm({ id, existing }: { id: string; existing?: Wallet }) {
     setSubmitted(true);
     if (hasErrors) return;
     try {
-      await save.mutateAsync({ id: isNew ? undefined : id, name: name.trim(), type, currency, fees });
+      await save.mutateAsync({ id: isNew ? undefined : id, name: name.trim(), platformId, type, currency, fees });
       router.back();
     } catch (error) {
       if (isPlanLimitError(error)) router.replace(`/paywall?reason=${error.reason}`);
@@ -72,50 +90,58 @@ function WalletForm({ id, existing }: { id: string; existing?: Wallet }) {
   return (
     <Screen>
       <Stack.Screen options={{ title: isNew ? t('wallets.new') : t('wallets.edit') }} />
-      <Field
-        label={t('wallets.name')}
-        placeholder={t('wallets.namePlaceholder')}
-        value={name}
-        onChangeText={setName}
-        error={submitted ? errors.name : undefined}
-        maxLength={80}
-      />
-      <Chips
-        label={t('wallets.type')}
-        options={WALLET_TYPES.map((w) => ({ value: w, label: t(`walletTypes.${w}`) }))}
-        value={type}
-        onChange={setType}
-      />
-      <CurrencyField label={t('wallets.currency')} value={currency} onChange={setCurrency} includeStablecoins />
+      {!chosen ? (
+        <PlatformSearch onSelect={choose} />
+      ) : (
+        <>
+          <SelectedPlatform platform={platform} name={name} onChange={() => setChosen(false)} />
+          <Field
+            label={t('wallets.alias')}
+            placeholder={t('wallets.namePlaceholder')}
+            value={name}
+            onChangeText={setName}
+            help={t('wallets.aliasHelp')}
+            error={submitted ? errors.name : undefined}
+            maxLength={80}
+          />
+          <Chips
+            label={t('wallets.type')}
+            options={WALLET_TYPES.map((w) => ({ value: w, label: t(`walletTypes.${w}`) }))}
+            value={type}
+            onChange={setType}
+          />
+          <CurrencyField label={t('wallets.currency')} value={currency} onChange={setCurrency} includeStablecoins />
 
-      <Section title={t('wallets.fees')}>
-        <Card style={{ gap: spacing.md }}>
-          <Text variant="caption" muted>
-            {t('wallets.feeHelp')}
-          </Text>
-          <Row gap={spacing.sm} style={{ alignItems: 'flex-start' }}>
-            <View style={{ flex: 1 }}>
-              <Field label={t('wallets.feePercent')} value={percent} onChangeText={setPercent} keyboardType="decimal-pad" placeholder="0" error={errors.percent} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Field label={t('wallets.feeFixed')} value={fixed} onChangeText={setFixed} keyboardType="decimal-pad" placeholder="0" error={errors.fixed} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Field label={t('wallets.feeMinimum')} value={minimum} onChangeText={setMinimum} keyboardType="decimal-pad" placeholder="0" error={errors.minimum} />
-            </View>
-          </Row>
-          {!errors.percent && !errors.fixed && !errors.minimum ? (
-            <Text variant="caption">
-              {t('wallets.feeExample', {
-                amount: f.money(exampleAmount, currency),
-                fee: f.money(calculateFee(fees, exampleAmount), currency),
-              })}
-            </Text>
-          ) : null}
-        </Card>
-      </Section>
+          <Section title={t('wallets.fees')}>
+            <Card style={{ gap: spacing.md }}>
+              <Text variant="caption" muted>
+                {t('wallets.feeHelp')}
+              </Text>
+              <Row gap={spacing.sm} style={{ alignItems: 'flex-start' }}>
+                <View style={{ flex: 1 }}>
+                  <Field label={t('wallets.feePercent')} value={percent} onChangeText={setPercent} keyboardType="decimal-pad" placeholder="0" error={errors.percent} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Field label={t('wallets.feeFixed')} value={fixed} onChangeText={setFixed} keyboardType="decimal-pad" placeholder="0" error={errors.fixed} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Field label={t('wallets.feeMinimum')} value={minimum} onChangeText={setMinimum} keyboardType="decimal-pad" placeholder="0" error={errors.minimum} />
+                </View>
+              </Row>
+              {!errors.percent && !errors.fixed && !errors.minimum ? (
+                <Text variant="caption">
+                  {t('wallets.feeExample', {
+                    amount: f.money(exampleAmount, currency),
+                    fee: f.money(calculateFee(fees, exampleAmount), currency),
+                  })}
+                </Text>
+              ) : null}
+            </Card>
+          </Section>
 
-      <Button title={t('common.save')} onPress={submit} loading={save.isPending} />
+          <Button title={t('common.save')} onPress={submit} loading={save.isPending} />
+        </>
+      )}
 
       {!isNew && holdings.length > 0 ? (
         <Section title={t('wallets.holdings')}>

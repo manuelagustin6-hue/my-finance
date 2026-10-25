@@ -119,6 +119,13 @@ const en: Translation = {
     dayChange: 'Daily change',
   },
   wallets: {
+    platform: 'Platform',
+    platformSearch: 'Search your exchange, broker, bank or wallet',
+    suggested: 'Suggested',
+    createCustom: 'Create “{{name}}” manually',
+    customPlatform: 'Custom platform',
+    alias: 'Name in the app',
+    aliasHelp: 'You can change it, e.g. “Binance savings”.',
     new: 'New wallet',
     edit: 'Edit wallet',
     name: 'Name',

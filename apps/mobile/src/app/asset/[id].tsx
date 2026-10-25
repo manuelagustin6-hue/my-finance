@@ -77,6 +77,8 @@ export default function AssetScreen() {
   const f = useFormat();
   const plan = usePlan();
   const [range, setRange] = useState<HistoryRange>('1Y');
+  /** Punto del gráfico que el usuario está tocando. */
+  const [scrub, setScrub] = useState<number | null>(null);
   const { portfolio, owned, ref, info, isLoading } = useAssetInfo(String(id));
 
   const history = useHistory(ref, range);
@@ -102,6 +104,15 @@ export default function AssetScreen() {
   const quote = owned ? portfolio.quoteMap?.get(owned.id) : undefined;
   const lastPrice = quote?.price ?? stats?.lastPrice ?? owned?.manualPrice;
   const dayChange = quote?.previousClose ? quote.price / quote.previousClose - 1 : undefined;
+  const points = canViewHistory(plan, range) ? (history.data ?? []) : [];
+  const scrubPoint = scrub !== null ? points[scrub] : undefined;
+  const firstClose = points[0]?.close;
+  // Al tocar el gráfico se muestra el precio de ese día y su variación desde el inicio del período.
+  const headerLabel = scrubPoint ? f.date(scrubPoint.date) : t('asset.lastPrice');
+  const headerPrice = scrubPoint?.close ?? lastPrice;
+  const headerChange =
+    scrubPoint && firstClose ? scrubPoint.close / firstClose - 1 : dayChange;
+  const headerChangeLabel = scrubPoint ? `${range}` : t('home.today');
   const position = owned ? portfolio.summary?.positions.find((p) => p.assetId === owned.id) : undefined;
   const closed = owned ? portfolio.summary?.closedPositions.find((p) => p.assetId === owned.id) : undefined;
   const myTxs = owned ? portfolio.transactions.filter((tx) => tx.assetId === owned.id).reverse() : [];
@@ -131,19 +142,31 @@ export default function AssetScreen() {
         <Row style={{ justifyContent: 'space-between', alignItems: 'flex-end' }}>
           <View>
             <Text variant="caption" muted>
-              {t('asset.lastPrice')}
+              {headerLabel}
             </Text>
-            <Text variant="title">{lastPrice !== undefined ? f.money(lastPrice, currency) : '—'}</Text>
+            <Text variant="title">{headerPrice !== undefined ? f.money(headerPrice, currency) : '—'}</Text>
           </View>
-          {dayChange !== undefined ? (
-            <Text variant="label" color={f.tone(dayChange)}>
-              {f.pct(dayChange)}
-            </Text>
+          {headerChange !== undefined ? (
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text variant="label" color={f.tone(headerChange)}>
+                {f.pct(headerChange)}
+              </Text>
+              <Text variant="caption" muted>
+                {headerChangeLabel}
+              </Text>
+            </View>
           ) : null}
         </Row>
         {ref ? (
           <>
-            <Chips options={RANGES.map((r) => ({ value: r, label: r }))} value={range} onChange={setRange} />
+            <Chips
+              options={RANGES.map((r) => ({ value: r, label: r }))}
+              value={range}
+              onChange={(r) => {
+                setScrub(null);
+                setRange(r);
+              }}
+            />
             {rangeLocked ? (
               <ProGate reason="full_price_history" description={t('asset.proRange')} />
             ) : history.isLoading ? (
@@ -153,6 +176,9 @@ export default function AssetScreen() {
             ) : (history.data ?? []).length > 1 ? (
               <LineChart
                 values={history.data!.map((p) => p.close)}
+                dates={history.data!.map((p) => p.date)}
+                formatValue={(v) => f.money(v, currency)}
+                onScrub={setScrub}
                 color={(() => {
                   const h = history.data!;
                   return h[h.length - 1]!.close >= h[0]!.close ? c.positive : c.negative;

@@ -14,3 +14,5 @@ export * from './market/logos.ts';
 export * from './fx/currencies.ts';
 export * from './fx/table.ts';
 export * from './fx/public.ts';
+export * from './chart.ts';
+export * from './platforms.ts';

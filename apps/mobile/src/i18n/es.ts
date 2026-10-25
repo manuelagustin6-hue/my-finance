@@ -129,6 +129,13 @@ const es = {
     dayChange: 'Variación diaria',
   },
   wallets: {
+    platform: 'Plataforma',
+    platformSearch: 'Busca tu exchange, broker, banco o billetera',
+    suggested: 'Sugeridas',
+    createCustom: 'Crear «{{name}}» a mano',
+    customPlatform: 'Plataforma personalizada',
+    alias: 'Nombre en la app',
+    aliasHelp: 'Puedes cambiarlo, por ejemplo «Binance ahorro».',
     new: 'Nueva billetera',
     edit: 'Editar billetera',
     name: 'Nombre',

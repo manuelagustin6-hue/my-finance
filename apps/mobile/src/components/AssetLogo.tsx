@@ -8,10 +8,21 @@ import { Text } from './ui';
  * Logo del activo en un círculo. Prueba las URLs candidatas en orden; bonos y efectivo
  * muestran la bandera; si no hay logo disponible, muestra las iniciales.
  */
-export function AssetLogo({ asset, index = 0, size = 36 }: { asset: LogoSubject; index?: number; size?: number }) {
+export function AssetLogo({
+  asset,
+  index = 0,
+  size = 36,
+  urls: customUrls,
+}: {
+  asset: LogoSubject;
+  index?: number;
+  size?: number;
+  /** URLs propias (p. ej. el ícono de una plataforma) en lugar de las del activo. */
+  urls?: string[];
+}) {
   const c = useTheme();
-  const urls = useMemo(() => logoCandidates(asset), [asset]);
-  const flag = assetFlag(asset);
+  const urls = useMemo(() => customUrls ?? logoCandidates(asset), [asset, customUrls]);
+  const flag = customUrls ? undefined : assetFlag(asset);
   const [attempt, setAttempt] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const color = c.series[index % c.series.length]!;

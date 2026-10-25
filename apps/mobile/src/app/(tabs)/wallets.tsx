@@ -1,9 +1,10 @@
-import { canAddWallet } from '@my-finance/core';
+import { canAddWallet, platformById } from '@my-finance/core';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { AllocationBar } from '@/components/charts';
 import { CurrencyToggle } from '@/components/CurrencyPicker';
+import { PlatformLogo } from '@/components/PlatformPicker';
 import { Button, Card, Divider, EmptyState, ErrorState, ListItem, Loading, Screen, Section } from '@/components/ui';
 import { usePortfolio } from '@/hooks/queries';
 import { useFormat } from '@/hooks/useFormat';
@@ -50,7 +51,7 @@ export default function WalletsScreen() {
                 <View key={w.id}>
                   {i > 0 ? <Divider /> : null}
                   <ListItem
-                    icon="wallet-outline"
+                    leading={<PlatformLogo platform={platformById(w.platformId)} name={w.name} />}
                     title={w.name}
                     subtitle={`${t(`walletTypes.${w.type}`)} · ${t('wallets.positions', { count: total?.assetCount ?? 0 })}`}
                     right={f.money(total?.value ?? 0, base)}
