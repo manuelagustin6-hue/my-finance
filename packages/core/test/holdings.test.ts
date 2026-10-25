@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { importFile, importHoldings, inferPriceUnit, type HoldingsResult } from '../src/index.ts';
+import { holdingsTemplate, importFile, importHoldings, inferPriceUnit, templateLang, type HoldingsResult, type TemplateLang } from '../src/index.ts';
 
 /** Tenencia como la muestra un broker argentino (datos inventados). */
 const AR = [
@@ -67,5 +67,28 @@ describe('tenencias', () => {
     const unknown = importFile('hola;chau\n1;2', {});
     expect(unknown.kind).toBe('transactions');
     expect(unknown.kind === 'transactions' && unknown.result.errors.length).toBe(1);
+  });
+
+  it.each<[TemplateLang, string]>([
+    ['es', 'ARS'],
+    ['en', 'USD'],
+    ['pt', 'BRL'],
+  ])('reconoce la planilla de tenencia de la app (%s)', (lang, cash) => {
+    const file = importFile(holdingsTemplate(lang), { defaultCurrency: cash === 'USD' ? 'USD' : cash });
+    expect(file.kind).toBe('holdings');
+    if (file.kind !== 'holdings') return;
+    const r = file.result;
+    expect(r.rows).toHaveLength(4);
+    expect(r.errors).toEqual([]);
+    expect(row(r, cash)).toMatchObject({ assetType: 'cash', unitCost: 1 });
+    expect(row(r, 'BTC')).toMatchObject({ quantity: 0.05, unitCost: 98000, assetType: 'crypto', currency: 'USD' });
+    expect(r.rows.filter((x) => x.assetType !== 'cash').every((x) => x.unitCost !== undefined && x.name)).toBe(true);
+  });
+
+  it('elige el idioma de la planilla', () => {
+    expect(templateLang('es-AR')).toBe('es');
+    expect(templateLang('pt-BR')).toBe('pt');
+    expect(templateLang('en')).toBe('en');
+    expect(templateLang('fr')).toBe('es');
   });
 });

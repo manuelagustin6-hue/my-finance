@@ -54,19 +54,10 @@ La forma más rápida de empezar es cargar lo que tienes hoy:
 1. En la web o la app de tu broker, exporta o copia la tabla de tu cartera (activo, cantidad y, si aparece, precio promedio).
    - Si el broker te la envía por mail (como Cocos), abre el mail en el iPhone, mantén presionado el adjunto y elige **Guardar en Archivos**.
 2. En la app: *Importar historial* → **Elegir archivo (CSV o Excel)**, o pega las filas copiadas.
+   - Si tu broker no permite exportarla, descarga la **Planilla de tenencia** desde *Importar historial* (al final), complétala en Excel o Google Sheets y súbela.
 3. La app reconoce que es una tenencia y muestra la lista de activos. Revisa la fecha y toca **Cargar como saldo inicial**.
 
 Desde esa fecha la app mide tus resultados. Si no hay precio promedio, se toma el precio de mercado de ese día.
-
-## Importar desde la web de tu broker
-
-1. En *Billeteras*, abre tu billetera y toca **Desde la web de {plataforma}** (o, en *Importar historial*, **Abrir la web de…**).
-2. Se abre la web real de la plataforma dentro de la app. Arriba se ve el dominio con un candado: verifica que sea el sitio correcto.
-3. Inicia sesión como siempre (usuario, contraseña y código de verificación). La app no ve ni guarda esos datos, y al cerrar se borra la sesión.
-4. Ve a *Movimientos*, *Actividad* o *Historial* y toca **Exportar** o **Descargar** (CSV o Excel).
-5. La app toma el archivo y vuelve al importador con la vista previa: revisa y toca **Importar**.
-
-Si la descarga no se captura (algunos sitios en Android guardan el archivo directo en el teléfono), vuelve y elígelo con **Elegir archivo (CSV o Excel)**.
 
 ## Si algo falla
 

@@ -29,11 +29,3 @@ export function sheetBytesToCsv(bytes: Uint8Array): string {
       return decodeText(bytes);
   }
 }
-
-/** Base64 → bytes (para los archivos que envía el navegador interno). */
-export function base64ToBytes(base64: string): Uint8Array {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-}

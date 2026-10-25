@@ -22,7 +22,7 @@ export type HoldingRole = 'symbol' | 'instrument' | 'unitCost' | 'costTotal' | '
 
 const HOLDING_SYNONYMS: Record<HoldingRole, readonly string[]> = {
   symbol: ['ticker', 'simbolo', 'symbol', 'codigo', 'activo', 'asset', 'ativo', 'coin', 'codigodenegociacao'],
-  instrument: ['instrumento', 'especie', 'descripcion', 'nombre', 'name', 'description', 'titulo', 'producto', 'produto', 'security', 'securitydescription'],
+  instrument: ['instrumento', 'especie', 'descripcion', 'nombre', 'name', 'nome', 'description', 'titulo', 'producto', 'produto', 'security', 'securitydescription'],
   unitCost: [
     'ppc', 'preciopromediodecompra', 'preciopromedio', 'precioprom', 'costopromedio', 'costounitario', 'preciodecompra', 'preciocompra',
     'averagecost', 'averageprice', 'avgcost', 'avgprice', 'costpershare', 'costbasispershare', 'unitcost', 'precomedio', 'customedio',
@@ -304,4 +304,47 @@ export function importFile(text: string, options: ImportOptions = {}): ImportedF
     return { kind: 'holdings', result: parseHoldings(rows, holdingsMapping, options.defaultCurrency) };
   }
   return { kind: 'transactions', result: tx };
+}
+
+export type TemplateLang = 'es' | 'en' | 'pt';
+
+/** Idioma de la planilla según el idioma de la app (es por defecto). */
+export function templateLang(language: string | undefined): TemplateLang {
+  const code = (language ?? '').slice(0, 2).toLowerCase();
+  return code === 'en' || code === 'pt' ? code : 'es';
+}
+
+const HOLDINGS_TEMPLATE_HEADERS: Record<TemplateLang, readonly string[]> = {
+  es: ['Activo', 'Nombre', 'Cantidad', 'Precio promedio', 'Moneda'],
+  en: ['Symbol', 'Name', 'Quantity', 'Average cost', 'Currency'],
+  pt: ['Ativo', 'Nome', 'Quantidade', 'Preço médio', 'Moeda'],
+};
+
+const HOLDINGS_TEMPLATE_ROWS: Record<TemplateLang, readonly (readonly string[])[]> = {
+  es: [
+    ['GGAL', 'Grupo Financiero Galicia', '100', '5000.50', 'ARS'],
+    ['AAPL', 'Apple Inc.', '10', '185.20', 'USD'],
+    ['BTC', 'Bitcoin', '0.05', '98000.00', 'USD'],
+    ['ARS', 'Efectivo en pesos', '250000.00', '', 'ARS'],
+  ],
+  en: [
+    ['AAPL', 'Apple Inc.', '10', '185.20', 'USD'],
+    ['VOO', 'Vanguard S&P 500 ETF', '5', '480.75', 'USD'],
+    ['BTC', 'Bitcoin', '0.05', '98000.00', 'USD'],
+    ['USD', 'Cash', '1500.00', '', 'USD'],
+  ],
+  pt: [
+    ['PETR4', 'Petrobras PN', '100', '30.50', 'BRL'],
+    ['AAPL', 'Apple Inc.', '10', '185.20', 'USD'],
+    ['BTC', 'Bitcoin', '0.05', '98000.00', 'USD'],
+    ['BRL', 'Saldo em reais', '2500.00', '', 'BRL'],
+  ],
+};
+
+/**
+ * Planilla de tenencia de la app: una fila por activo con cantidad y, opcionalmente, precio promedio.
+ * Si se deja vacío el precio promedio, se usa el precio de mercado de la fecha del saldo inicial.
+ */
+export function holdingsTemplate(lang: TemplateLang = 'es'): string {
+  return [HOLDINGS_TEMPLATE_HEADERS[lang], ...HOLDINGS_TEMPLATE_ROWS[lang]].map((row) => row.join(',')).join('\n');
 }

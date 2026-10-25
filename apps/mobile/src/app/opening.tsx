@@ -1,4 +1,4 @@
-import { canAddAsset, type Asset, type Transaction, type Wallet } from '@my-finance/core';
+import { canAddAsset, holdingsTemplate, templateLang, type Asset, type Transaction, type Wallet } from '@my-finance/core';
 import { useQueries } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -11,6 +11,7 @@ import { isPlanLimitError, market, repository } from '@/data';
 import { refOf, useInvalidateUserData, usePortfolio } from '@/hooks/queries';
 import { useFormat } from '@/hooks/useFormat';
 import { confirmDestructive, parseInput } from '@/lib/confirm';
+import { shareTextFile } from '@/lib/exporter';
 import { openingTransactions, saveOpeningBalance } from '@/lib/openingBalance';
 import { usePlan } from '@/state/app';
 import { spacing, useTheme } from '@/theme';
@@ -57,7 +58,7 @@ function NeedWallet() {
 }
 
 function OpeningForm({ initialWallet }: { initialWallet: Wallet }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const c = useTheme();
   const f = useFormat();
   const plan = usePlan();
@@ -201,6 +202,13 @@ function OpeningForm({ initialWallet }: { initialWallet: Wallet }) {
         small
         icon="document-attach-outline"
         onPress={() => router.push({ pathname: '/import', params: { walletId } })}
+      />
+      <Button
+        title={t('opening.downloadTemplate')}
+        variant="ghost"
+        small
+        icon="download-outline"
+        onPress={() => void shareTextFile('tenencia-my-finance.csv', holdingsTemplate(templateLang(i18n.language)), 'text/csv')}
       />
       {p.wallets.length > 1 ? (
         <Chips label={t('tx.wallet')} options={p.wallets.map((w) => ({ value: w.id, label: w.name }))} value={walletId} onChange={switchWallet} />

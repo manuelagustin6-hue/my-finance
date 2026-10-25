@@ -6,8 +6,8 @@ import {
   isBeforeOpening,
   isSmartResult,
   missingHoldings,
-  platformById,
-  platformWebUrl,
+  holdingsTemplate,
+  templateLang,
   parseCsv,
   detectSmartMapping,
   transactionFingerprint,
@@ -23,7 +23,7 @@ import {
 } from '@my-finance/core';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, View } from 'react-native';
@@ -37,7 +37,6 @@ import { shareTextFile } from '@/lib/exporter';
 import { loadImportActions, saveImportActions } from '@/lib/importMemory';
 import { openingTransactions, saveOpeningBalance, type OpeningEntry } from '@/lib/openingBalance';
 import { usePlan } from '@/state/app';
-import { usePendingImport } from '@/state/pendingImport';
 import { spacing, useTheme } from '@/theme';
 
 type AssetResolution =
@@ -87,7 +86,7 @@ async function readFile(asset: DocumentPicker.DocumentPickerAsset): Promise<stri
 }
 
 export default function ImportScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const c = useTheme();
   const f = useFormat();
   const plan = usePlan();
@@ -104,7 +103,6 @@ export default function ImportScreen() {
   const [message, setMessage] = useState<{ text: string; tone: 'info' | 'warning' } | null>(null);
 
   const wallet = p.wallets.find((w) => w.id === walletId) ?? p.wallets[0];
-  const platform = platformById(wallet?.platformId);
 
   /** Vincula cada símbolo con un activo propio, uno del catálogo o uno personalizado nuevo. */
   async function resolveAssets(rows: readonly AssetRow[]): Promise<Map<string, AssetResolution>> {
@@ -192,25 +190,6 @@ export default function ImportScreen() {
       setBusy(false);
     }
   };
-
-  // Archivo capturado en la web del broker: se analiza al volver a esta pantalla. Sin memoizar a
-  // propósito, para usar los datos actuales de la cartera; `take` lo entrega una sola vez.
-  useFocusEffect(() => {
-    if (p.isLoading || p.wallets.length === 0 || busy) return; // espera a que cargue la cartera
-    const file = usePendingImport.getState().take();
-    if (!file) return;
-    void run(async () => ({ text: sheetBytesToCsv(file.bytes), name: file.name }));
-  });
-
-  const openBrokerWeb = () =>
-    router.push({
-      pathname: '/broker-web',
-      params: {
-        walletId: wallet?.id ?? '',
-        name: platform?.name ?? wallet?.name ?? '',
-        ...(platform ? { url: platformWebUrl(platform) } : {}),
-      },
-    });
 
   const pickFile = () =>
     run(async () => {
@@ -593,22 +572,25 @@ export default function ImportScreen() {
         </>
       ) : null}
 
-      {!analysis && !holdings ? (
+      <Section title={t('importer.templatesTitle')}>
+        <Text variant="caption" muted>
+          {t('importer.templatesHelp')}
+        </Text>
         <Button
-          title={platform ? t('importer.fromWeb', { name: platform.name }) : t('importer.fromWebGeneric')}
-          icon="globe-outline"
-          variant="ghost"
+          title={t('importer.templateHoldings')}
+          icon="download-outline"
+          variant="secondary"
           small
-          onPress={openBrokerWeb}
-          disabled={busy}
+          onPress={() => void shareTextFile('tenencia-my-finance.csv', holdingsTemplate(templateLang(i18n.language)), 'text/csv')}
         />
-      ) : null}
-      <Button
-        title={t('importer.shareTemplate')}
-        variant="ghost"
-        small
-        onPress={() => void shareTextFile('plantilla-my-finance.csv', GENERIC_TEMPLATE_EXAMPLE, 'text/csv')}
-      />
+        <Button
+          title={t('importer.templateMovements')}
+          icon="download-outline"
+          variant="secondary"
+          small
+          onPress={() => void shareTextFile('movimientos-my-finance.csv', GENERIC_TEMPLATE_EXAMPLE, 'text/csv')}
+        />
+      </Section>
     </Screen>
   );
 }

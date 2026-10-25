@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeWebUrl, PLATFORMS, platformById, platformWebUrl, searchPlatforms, urlHost } from '../src/index.ts';
+import { PLATFORMS, platformById, searchPlatforms } from '../src/index.ts';
 
 describe('catálogo de plataformas', () => {
   it('ids únicos', () => {
@@ -24,22 +24,5 @@ describe('catálogo de plataformas', () => {
   it('busca por id', () => {
     expect(platformById('ibkr')?.name).toBe('Interactive Brokers');
     expect(platformById(undefined)).toBeUndefined();
-  });
-});
-
-describe('dirección web de la plataforma', () => {
-  it('usa la página de ingreso o la portada del dominio', () => {
-    expect(platformWebUrl(platformById('cocos')!)).toBe('https://app.cocos.capital');
-    expect(platformWebUrl(platformById('binance')!)).toBe('https://binance.com');
-  });
-
-  it('normaliza lo que escribe el usuario', () => {
-    expect(normalizeWebUrl('mibroker.com.ar/login')).toBe('https://mibroker.com.ar/login');
-    expect(normalizeWebUrl('http://WWW.Broker.com')).toBe('https://www.broker.com');
-    expect(normalizeWebUrl('javascript:alert(1)')).toBeUndefined();
-    expect(normalizeWebUrl('file:///etc/passwd')).toBeUndefined();
-    expect(normalizeWebUrl('no es una web')).toBeUndefined();
-    expect(normalizeWebUrl('localhost')).toBeUndefined();
-    expect(urlHost('https://www.app.cocos.capital/movimientos?x=1')).toBe('app.cocos.capital');
   });
 });
