@@ -77,7 +77,6 @@ jobs:
             fs.writeFileSync('app.json', JSON.stringify(app, null, 2));
             fs.appendFileSync(process.env.GITHUB_ENV, 'PROJECT_ID=' + id + '\n');
           "
-          echo "EXPO_OWNER=$(eas whoami | head -n 1)" >> "$GITHUB_ENV"
 
       - name: Publicar la versión para Expo Go
         if: steps.token.outputs.ready == 'true'
@@ -95,17 +94,15 @@ jobs:
             const fs = require('fs');
             const updates = JSON.parse(fs.readFileSync('update.json', 'utf8'));
             const group = (Array.isArray(updates) ? updates[0] : updates).group;
-            const owner = process.env.EXPO_OWNER;
             const project = process.env.PROJECT_ID;
-            const page = 'https://expo.dev/accounts/' + owner + '/projects/my-finance/updates/' + group;
             const lines = [
               '## La app está publicada',
               '',
               '**Opción 1 (la más simple):** abre Expo Go en el iPhone con tu cuenta de Expo; la app aparece en la pestaña *Home* dentro de *Projects*.',
               '',
-              '**Opción 2:** abre esta página desde el iPhone y toca *Preview* / *Open with Expo Go*: ' + page,
+              '**Opción 2:** en expo.dev → *Projects* → *my-finance* → *Updates*, abre la última versión y toca *Preview* para abrirla en Expo Go.',
               '',
-              '**Opción 3:** enlace directo para Expo Go: \`exp://u.expo.dev/update/' + group + '\`',
+              '**Opción 3:** enlace directo para Expo Go (cópialo y pégalo en Safari): \`exp://u.expo.dev/update/' + group + '\`',
               '',
               'Proyecto: ' + project,
             ];

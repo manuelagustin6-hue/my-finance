@@ -37,7 +37,7 @@ Descarga **Expo Go** desde el App Store.
 ## 6. Abrir la app
 
 - **Lo más simple:** abre Expo Go. Con tu cuenta iniciada, la app *my-finance* aparece en *Home → Projects*. Tócala.
-- **Alternativa:** en GitHub, abre la ejecución terminada del paso 5; al final del resumen hay un enlace a la página de la app en expo.dev con el botón para abrirla en Expo Go.
+- **Alternativa:** en expo.dev → *Projects* → *my-finance* → *Updates*, abre la última versión y toca *Preview*.
 
 ## Versiones nuevas
 
