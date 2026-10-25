@@ -16,6 +16,9 @@ interface AppState {
   serverPlan: PlanId;
   /** Pro simulado en modo demo, para probar las funciones pagas sin tiendas. */
   demoPro: boolean;
+  /** Moneda elegida para ver la cartera en esta sesión (null = moneda principal). */
+  displayCurrency: string | null;
+  setDisplayCurrency(code: string | null): void;
   setSession(userId: string | null, email: string | null): void;
   setReady(): void;
   setBilling(state: BillingState): void;
@@ -31,6 +34,8 @@ export const useAppStore = create<AppState>((set) => ({
   billing: { isPro: false },
   serverPlan: 'free',
   demoPro: false,
+  displayCurrency: null,
+  setDisplayCurrency: (displayCurrency) => set({ displayCurrency }),
   setSession: (userId, email) => set({ userId, email }),
   setReady: () => set({ ready: true }),
   setBilling: (billing) => set({ billing }),

@@ -1,8 +1,13 @@
-import type { Asset, AssetSearchResult, PlanId, Transaction, Wallet } from '@my-finance/core';
+import type { Asset, AssetSearchResult, FxPreferences, PlanId, Transaction, Wallet } from '@my-finance/core';
 
 export interface Profile {
   displayName?: string;
+  /** Moneda principal en la que se valúa y consolida la cartera. */
   baseCurrency: string;
+  /** Segunda moneda para ver la cartera (por defecto USD). */
+  secondaryCurrency: string;
+  /** Tipo de dólar elegido en mercados con varias cotizaciones (Argentina, Venezuela). */
+  fxPreferences: FxPreferences;
   locale: string;
   /** true cuando el usuario ya eligió su moneda base. */
   onboarded: boolean;

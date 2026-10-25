@@ -32,7 +32,7 @@ interface LocalDb {
 }
 
 export function defaultProfile(): Profile {
-  return { baseCurrency: 'USD', locale: 'es', onboarded: false };
+  return { baseCurrency: 'USD', secondaryCurrency: 'USD', fxPreferences: {}, locale: 'es', onboarded: false };
 }
 
 function emptyDb(): LocalDb {
@@ -71,7 +71,8 @@ export class LocalRepository implements Repository {
   }
 
   async getProfile() {
-    return (await this.load()).profile;
+    // Completa campos agregados en versiones posteriores.
+    return { ...defaultProfile(), ...(await this.load()).profile };
   }
 
   updateProfile(patch: Partial<Profile>) {

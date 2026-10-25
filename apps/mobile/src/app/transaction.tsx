@@ -15,9 +15,9 @@ import { View } from 'react-native';
 import { AssetAvatar } from '@/components/PositionRow';
 import { Button, Card, Chips, Divider, Field, ListItem, Loading, Notice, Row, Screen, Text } from '@/components/ui';
 import { isPlanLimitError, market, repository } from '@/data';
-import { useDeleteTransaction, usePortfolio, useSaveTransactions, useSearch } from '@/hooks/queries';
+import { useDeleteTransaction, useFxHistory, usePortfolio, useSaveTransactions, useSearch } from '@/hooks/queries';
 import { useFormat } from '@/hooks/useFormat';
-import { BASE_CURRENCIES } from '@/lib/config';
+import { CurrencyField } from '@/components/CurrencyPicker';
 import { confirmDestructive, parseInput } from '@/lib/confirm';
 import { todayIso } from '@/lib/id';
 import { usePlan } from '@/state/app';
@@ -129,6 +129,13 @@ function TransactionForm({ params }: { params: Params }) {
   const feeValue = feeTouched ? (parseInput(fee) ?? 0) : autoFee;
   const fx = parseInput(fxRate);
 
+  // Tipo de cambio de la fecha de la operación (con el dólar como puente).
+  const validDate = DATE_RE.test(date) && date < todayIso();
+  const dayFx = useFxHistory(validDate ? [date] : [], currency !== 'USD' ? [currency] : [], p.prefs);
+  const dayPerUsd = currency === 'USD' ? undefined : validDate ? dayFx.data?.[date]?.[currency] : p.fxTable.perUsd(currency);
+  const dayRateText =
+    dayPerUsd !== undefined ? t('fx.dayRate', { date: f.date(validDate ? date : todayIso()), rate: f.num(dayPerUsd, 4), currency }) : undefined;
+
   const errors = {
     wallet: !wallet ? t('tx.errors.wallet') : undefined,
     asset: !info ? t('tx.errors.asset') : undefined,
@@ -197,7 +204,6 @@ function TransactionForm({ params }: { params: Params }) {
     );
   }
 
-  const currencies = [...new Set([info?.currency, wallet?.currency, base, ...BASE_CURRENCIES, 'USDT'].filter(Boolean) as string[])];
   const showErr = (key: keyof typeof errors) => (submitted ? errors[key] : undefined);
 
   return (
@@ -317,7 +323,12 @@ function TransactionForm({ params }: { params: Params }) {
 
       {!isSplit ? (
         <>
-          <Chips label={t('tx.currency')} options={currencies.map((x) => ({ value: x, label: x }))} value={currency} onChange={setCurrency} />
+          <CurrencyField label={t('tx.currency')} value={currency} onChange={setCurrency} includeStablecoins />
+          {dayRateText ? (
+            <Text variant="caption" muted>
+              {dayRateText}
+            </Text>
+          ) : null}
           <Field
             label={t('tx.fee')}
             value={feeTouched ? fee : autoFee ? String(autoFee) : ''}

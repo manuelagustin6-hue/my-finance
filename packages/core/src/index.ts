@@ -10,3 +10,6 @@ export * from './csv/templates.ts';
 export * from './market/provider.ts';
 export * from './market/catalog.ts';
 export * from './market/mock.ts';
+export * from './fx/currencies.ts';
+export * from './fx/table.ts';
+export * from './fx/public.ts';

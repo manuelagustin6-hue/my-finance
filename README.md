@@ -11,6 +11,7 @@ Aplicación móvil (iOS y Android) para consolidar en un solo lugar todas las in
 - **Importación CSV** con detección automática: plantilla propia, Binance, Coinbase e Interactive Brokers (Flex Query). Detecta duplicados.
 - **Ficha de cada activo** (aunque no se tenga): precio, gráfico, rendimiento por período, volatilidad anualizada, máxima caída, máximos/mínimos de 52 semanas; para acciones, estados financieros trimestrales y enlaces a las presentaciones.
 - **Análisis del portafolio**: evolución del valor, rendimiento ponderado por tiempo, desvío (volatilidad) y máxima caída; distribución por tipo de activo, país, moneda y billetera.
+- **Tipos de cambio globales** (más de 150 monedas) con el **dólar como moneda puente**: la cartera se ve en la moneda principal y en una secundaria (por defecto USD) con un toque. El costo de cada operación usa el tipo de cambio **del día en que se hizo**, así el resultado en pesos y en dólares es correcto. Para Argentina se elige el dólar a usar (oficial, MEP, CCL, blue, mayorista, cripto, tarjeta) y para Venezuela (oficial o paralelo). Incluye conversor y tabla de cotizaciones.
 - **Activos personalizados** con precio manual (bonos locales, plazos fijos, etc.).
 - **Freemium**: plan Gratis con límites y plan Pro por suscripción (RevenueCat).
 - Idiomas: español, inglés y portugués. Tema claro y oscuro.
@@ -29,6 +30,19 @@ Aplicación móvil (iOS y Android) para consolidar en un solo lugar todas las in
 | Exportación de datos | — | Sí |
 
 Los límites están definidos en un único lugar: `packages/core/src/plans.ts`, y se replican en la base de datos (triggers en la migración) para que no se puedan saltear desde el cliente.
+
+## Tipos de cambio
+
+Todas las conversiones pasan por el dólar: `ARS → USD → MXN`. Fuentes públicas, gratuitas y sin clave (`packages/core/src/fx/public.ts`):
+
+| Fuente | Uso |
+|---|---|
+| [currency-api](https://github.com/fawazahmed0/exchange-api) | Más de 150 monedas, actual e histórico diario (desde marzo de 2024) |
+| [Frankfurter](https://frankfurter.dev) (Banco Central Europeo) | Respaldo para fechas anteriores (~30 monedas, desde 1999) |
+| [DolarAPI](https://dolarapi.com) | Cotización actual de cada tipo de dólar en Argentina y Venezuela |
+| [ArgentinaDatos](https://argentinadatos.com) | Historia diaria de cada tipo de dólar en Argentina |
+
+Las cotizaciones de días pasados se guardan en caché (en el teléfono en modo demo y en la tabla `fx_cache` en modo nube). Si no hay conexión, se muestran valores de referencia y la app lo avisa. Para monedas sin historia en la fecha pedida se usa la cotización disponible más cercana; el usuario siempre puede cargar el tipo de cambio exacto en la operación.
 
 ## Estructura
 
@@ -59,6 +73,22 @@ Requisitos: Node 22 y pnpm 10.
 pnpm install
 pnpm --filter mobile start      # abre Expo (iOS, Android o web)
 ```
+
+### Abrirla en el celular
+
+1. Instalar **Expo Go** desde App Store o Google Play.
+2. En una computadora: instalar [Node.js 22](https://nodejs.org) y luego `npm install -g pnpm`.
+3. Descargar el proyecto y arrancarlo:
+   ```bash
+   git clone https://github.com/manuelagustin6-hue/my-finance.git
+   cd my-finance
+   git checkout claude/portfolio-app-mvp
+   pnpm install
+   pnpm --filter mobile start
+   ```
+4. Escanear el código QR que aparece: en iPhone con la cámara, en Android desde Expo Go. El teléfono y la computadora deben estar en la misma red Wi-Fi (si no, usar `pnpm --filter mobile start --tunnel`).
+
+Para instalarla sin computadora encendida (APK de Android o TestFlight en iPhone) se usa EAS Build con una cuenta gratuita de Expo; ver "Publicar en las tiendas".
 
 Pruebas y verificaciones:
 

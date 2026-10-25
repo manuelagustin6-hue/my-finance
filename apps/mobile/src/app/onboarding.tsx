@@ -5,7 +5,8 @@ import { Pressable, View } from 'react-native';
 import { Button, Screen, Text } from '@/components/ui';
 import { useUpdateProfile } from '@/hooks/queries';
 import { i18nLanguage } from '@/lib/language';
-import { BASE_CURRENCIES } from '@/lib/config';
+import { MAIN_CURRENCIES } from '@my-finance/core';
+import { CurrencyField } from '@/components/CurrencyPicker';
 import { radius, spacing, useTheme } from '@/theme';
 
 export default function OnboardingScreen() {
@@ -21,7 +22,7 @@ export default function OnboardingScreen() {
         <Text muted>{t('onboarding.subtitle')}</Text>
       </View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-        {BASE_CURRENCIES.map((code) => {
+        {MAIN_CURRENCIES.slice(0, 12).map(({ code }) => {
           const active = code === currency;
           return (
             <Pressable
@@ -46,11 +47,12 @@ export default function OnboardingScreen() {
           );
         })}
       </View>
+      <CurrencyField label={t('fx.otherCurrencies')} value={currency} onChange={setCurrency} />
       <Button
         title={t('common.continue')}
         loading={update.isPending}
         onPress={async () => {
-          await update.mutateAsync({ baseCurrency: currency, onboarded: true, locale: i18nLanguage() });
+          await update.mutateAsync({ baseCurrency: currency, secondaryCurrency: 'USD', onboarded: true, locale: i18nLanguage() });
           router.replace('/');
         }}
       />

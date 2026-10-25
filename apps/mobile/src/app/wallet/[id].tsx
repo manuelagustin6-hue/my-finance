@@ -3,16 +3,15 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
+import { CurrencyField } from '@/components/CurrencyPicker';
 import { PositionRow } from '@/components/PositionRow';
 import { Button, Card, Chips, Divider, Field, Loading, Row, Screen, Section, Text } from '@/components/ui';
 import { isPlanLimitError } from '@/data';
 import { useDeleteWallet, usePortfolio, useSaveWallet, useWallets } from '@/hooks/queries';
 import { useFormat } from '@/hooks/useFormat';
-import { BASE_CURRENCIES } from '@/lib/config';
 import { confirmDestructive, parseInput } from '@/lib/confirm';
 import { spacing } from '@/theme';
 
-const CURRENCIES = [...BASE_CURRENCIES, 'USDT'];
 
 export default function WalletScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -87,7 +86,7 @@ function WalletForm({ id, existing }: { id: string; existing?: Wallet }) {
         value={type}
         onChange={setType}
       />
-      <Chips label={t('wallets.currency')} options={CURRENCIES.map((c) => ({ value: c, label: c }))} value={currency} onChange={setCurrency} />
+      <CurrencyField label={t('wallets.currency')} value={currency} onChange={setCurrency} includeStablecoins />
 
       <Section title={t('wallets.fees')}>
         <Card style={{ gap: spacing.md }}>

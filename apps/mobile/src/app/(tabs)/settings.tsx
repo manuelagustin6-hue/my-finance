@@ -1,4 +1,4 @@
-import { hasFeature } from '@my-finance/core';
+import { FX_VARIANTS, hasFeature, resolvePreferences } from '@my-finance/core';
 import { useQueryClient } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
@@ -10,7 +10,8 @@ import { isDemoMode, repository } from '@/data';
 import { useProfile, useUpdateProfile } from '@/hooks/queries';
 import { useFormat } from '@/hooks/useFormat';
 import { LANGUAGES, type LanguageCode } from '@/i18n';
-import { BASE_CURRENCIES, isBillingConfigured } from '@/lib/config';
+import { CurrencyField } from '@/components/CurrencyPicker';
+import { isBillingConfigured } from '@/lib/config';
 import { confirmDestructive } from '@/lib/confirm';
 import { shareTextFile, transactionsToCsv } from '@/lib/exporter';
 import { i18nLanguage, setLanguage } from '@/lib/language';
@@ -30,6 +31,7 @@ export default function SettingsScreen() {
   const billing = useAppStore((s) => s.billing);
   const demoPro = useAppStore((s) => s.demoPro);
   const setDemoPro = useAppStore((s) => s.setDemoPro);
+  const setDisplayCurrency = useAppStore((s) => s.setDisplayCurrency);
 
   const gated = (feature: Parameters<typeof hasFeature>[1], action: () => void) => () =>
     hasFeature(plan, feature) ? action() : router.push(`/paywall?reason=${feature}`);
@@ -99,11 +101,36 @@ export default function SettingsScreen() {
 
       <Section title={t('settings.preferences')}>
         <Card style={{ gap: spacing.md }}>
-          <Chips
+          <CurrencyField
             label={t('settings.baseCurrency')}
-            options={BASE_CURRENCIES.map((code) => ({ value: code, label: code }))}
-            value={profile.data?.baseCurrency}
-            onChange={(baseCurrency) => update.mutate({ baseCurrency })}
+            value={profile.data?.baseCurrency ?? 'USD'}
+            onChange={(baseCurrency) => {
+              setDisplayCurrency(null);
+              update.mutate({ baseCurrency });
+            }}
+          />
+          <CurrencyField
+            label={t('settings.secondaryCurrency')}
+            value={profile.data?.secondaryCurrency ?? 'USD'}
+            onChange={(secondaryCurrency) => {
+              setDisplayCurrency(null);
+              update.mutate({ secondaryCurrency });
+            }}
+          />
+          <Text variant="caption" muted>
+            {t('settings.secondaryHelp')}
+          </Text>
+          <Chips
+            label={t('fx.arsPreference')}
+            options={FX_VARIANTS.ARS.map((v) => ({ value: v, label: t(`fx.variants.${v}`) }))}
+            value={resolvePreferences(profile.data?.fxPreferences).ARS}
+            onChange={(ARS) => update.mutate({ fxPreferences: { ...profile.data?.fxPreferences, ARS } })}
+          />
+          <Chips
+            label={t('fx.vesPreference')}
+            options={FX_VARIANTS.VES.map((v) => ({ value: v, label: t(`fx.variants.${v}`) }))}
+            value={resolvePreferences(profile.data?.fxPreferences).VES}
+            onChange={(VES) => update.mutate({ fxPreferences: { ...profile.data?.fxPreferences, VES } })}
           />
           <Chips
             label={t('settings.language')}
@@ -119,6 +146,8 @@ export default function SettingsScreen() {
 
       <Section title={t('settings.data')}>
         <Card style={{ paddingVertical: spacing.xs }}>
+          <ListItem icon="swap-horizontal-outline" title={t('settings.exchangeRates')} onPress={() => router.push('/fx')} />
+          <Divider />
           <ListItem icon="time-outline" title={t('settings.transactions')} onPress={() => router.push('/transactions')} />
           <Divider />
           <ListItem icon="cloud-upload-outline" title={t('settings.import')} onPress={() => router.push('/import')} />

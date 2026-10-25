@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { AllocationBar } from '@/components/charts';
+import { CurrencyToggle } from '@/components/CurrencyPicker';
 import { Button, Card, Divider, EmptyState, ErrorState, ListItem, Loading, Screen, Section } from '@/components/ui';
 import { usePortfolio } from '@/hooks/queries';
 import { useFormat } from '@/hooks/useFormat';
@@ -41,6 +42,7 @@ export default function WalletsScreen() {
         </EmptyState>
       ) : (
         <>
+          <CurrencyToggle options={p.display.options} value={base} onChange={p.display.set} />
           <Card style={{ paddingVertical: spacing.xs }}>
             {p.wallets.map((w, i) => {
               const total = totals?.get(w.id);

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
+import { CurrencyToggle } from '@/components/CurrencyPicker';
 import { PositionRow } from '@/components/PositionRow';
 import { Card, Chips, Divider, EmptyState, ErrorState, ListItem, Loading, Screen, Section } from '@/components/ui';
 import { usePortfolio, useWallets } from '@/hooks/queries';
@@ -30,6 +31,7 @@ export default function PositionsScreen() {
 
   return (
     <Screen refreshing={p.isFetchingQuotes} onRefresh={() => void p.refetch()}>
+      <CurrencyToggle options={p.display.options} value={base} onChange={p.display.set} />
       {options.length > 2 ? <Chips options={options} value={walletId} onChange={setWalletId} /> : null}
       {open.length === 0 ? (
         <EmptyState title={t('positions.empty')} />

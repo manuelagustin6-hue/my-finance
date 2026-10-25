@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, Chips, Field, Screen, Text } from '@/components/ui';
 import { repository } from '@/data';
 import { keys } from '@/hooks/queries';
-import { BASE_CURRENCIES } from '@/lib/config';
+import { CurrencyField } from '@/components/CurrencyPicker';
 import { parseInput } from '@/lib/confirm';
 
 export default function CustomAssetScreen() {
@@ -57,7 +57,7 @@ export default function CustomAssetScreen() {
         value={type}
         onChange={setType}
       />
-      <Chips label={t('tx.currency')} options={BASE_CURRENCIES.map((x) => ({ value: x, label: x }))} value={currency} onChange={setCurrency} />
+      <CurrencyField label={t('tx.currency')} value={currency} onChange={setCurrency} includeStablecoins />
       <Field
         label={`${t('asset.manualPrice')} (${t('common.optional')})`}
         value={price}

@@ -3,6 +3,9 @@
 import {
   hasFeature,
   MockMarketDataProvider,
+  PublicFxProvider,
+  type FxCache,
+  type FxPreferences,
   PLANS,
   RANGE_DAYS,
   type AssetRef,
@@ -25,12 +28,27 @@ function buildProvider(): MarketDataProvider {
 
 const provider = buildProvider();
 
+/** Caché de cotizaciones en Postgres, compartida entre todos los usuarios. */
+const fxCache: FxCache = {
+  async get(key) {
+    const { data } = await adminClient().from('fx_cache').select('value').eq('key', key).maybeSingle();
+    return data?.value ?? null;
+  },
+  async set(key, value) {
+    await adminClient().from('fx_cache').upsert({ key, value, updated_at: new Date().toISOString() });
+  },
+};
+
+const fx = new PublicFxProvider(undefined, fxCache);
+const MAX_FX_DATES = 400;
+
 type Body =
   | { action: 'search'; query: string; limit?: number }
   | { action: 'quotes'; assets: AssetRef[] }
   | { action: 'history'; asset: AssetRef; range: HistoryRange }
   | { action: 'fundamentals'; asset: AssetRef }
-  | { action: 'fx'; base: string; currencies: string[] }
+  | { action: 'fx_latest'; prefs?: FxPreferences }
+  | { action: 'fx_on'; dates: string[]; currencies: string[]; prefs?: FxPreferences }
   | { action: 'ensure_asset'; asset: AssetRef };
 
 async function planOf(userId: string): Promise<PlanId> {
@@ -120,8 +138,11 @@ Deno.serve(async (req) => {
         return json(await provider.getFundamentals(body.asset));
       }
 
-      case 'fx':
-        return json(await provider.getFxRates(body.base, body.currencies ?? []));
+      case 'fx_latest':
+        return json(await fx.latest(body.prefs));
+
+      case 'fx_on':
+        return json(await fx.on((body.dates ?? []).slice(0, MAX_FX_DATES), body.currencies ?? [], body.prefs));
 
       case 'ensure_asset': {
         // Solo el servidor agrega activos al catálogo global, y únicamente si el proveedor los conoce.

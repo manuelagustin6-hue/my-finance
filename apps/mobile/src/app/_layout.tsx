@@ -50,6 +50,7 @@ function RootNavigator() {
         <Stack.Screen name="paywall" options={{ title: '', presentation: 'modal' }} />
         <Stack.Screen name="analytics" options={{ title: t('analytics.title') }} />
         <Stack.Screen name="transactions" options={{ title: t('tx.history') }} />
+        <Stack.Screen name="fx" options={{ title: t('fx.title') }} />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />

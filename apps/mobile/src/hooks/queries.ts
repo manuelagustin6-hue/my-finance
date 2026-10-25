@@ -1,10 +1,11 @@
 import {
   computePositions,
+  FxTable,
+  type FxPreferences,
   summarizePortfolio,
   valuePosition,
   type Asset,
   type AssetRef,
-  type FxLookup,
   type HistoryRange,
   type Quote,
   type Transaction,
@@ -13,7 +14,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { market, repository, type NewTransaction, type NewWallet, type Profile } from '@/data';
-import { usePlan } from '@/state/app';
+import { useAppStore, usePlan } from '@/state/app';
 
 export const keys = {
   profile: ['profile'] as const,
@@ -104,25 +105,37 @@ export function useQuotes(refs: AssetRef[]) {
   });
 }
 
-export function useFxRates(base: string | undefined, currencies: string[]) {
-  const list = [...new Set(currencies)].sort();
+/** Tipos de cambio actuales contra USD. */
+export function useFxSnapshot(prefs: FxPreferences | undefined) {
   return useQuery({
-    queryKey: ['fx', base, list],
-    queryFn: () => market.fx(base!, list),
-    enabled: !!base && list.length > 0,
+    queryKey: ['fx-latest', prefs ?? {}],
+    queryFn: () => market.fxLatest(prefs ?? {}),
     staleTime: 10 * 60_000,
+    refetchInterval: 15 * 60_000,
   });
 }
 
-/** Construye la función de conversión a partir de "unidades de base por 1 unidad de moneda". */
-export function fxLookupFrom(base: string, rates: Record<string, number> | undefined): FxLookup {
-  return (from, to) => {
-    if (from === to) return 1;
-    const fromRate = from === base ? 1 : rates?.[from];
-    const toRate = to === base ? 1 : rates?.[to];
-    if (fromRate === undefined || toRate === undefined) return undefined;
-    return fromRate / toRate;
-  };
+/** Tipos de cambio contra USD en fechas pasadas (para el costo histórico). */
+export function useFxHistory(dates: string[], currencies: string[], prefs: FxPreferences | undefined) {
+  const d = [...new Set(dates.map((x) => x.slice(0, 10)))].sort();
+  const c = [...new Set(currencies)].filter((x) => x !== 'USD').sort();
+  return useQuery({
+    queryKey: ['fx-on', d, c, prefs ?? {}],
+    queryFn: () => market.fxOn(d, c, prefs ?? {}),
+    enabled: d.length > 0 && c.length > 0,
+    staleTime: 60 * 60_000,
+  });
+}
+
+/** Moneda en la que se está viendo la cartera (la principal o la secundaria). */
+export function useDisplayCurrency() {
+  const profile = useProfile();
+  const selected = useAppStore((s) => s.displayCurrency);
+  const setDisplayCurrency = useAppStore((s) => s.setDisplayCurrency);
+  const base = profile.data?.baseCurrency;
+  const options = [...new Set([base, profile.data?.secondaryCurrency].filter(Boolean) as string[])];
+  const current = selected && options.includes(selected) ? selected : base;
+  return { current, options, set: setDisplayCurrency };
 }
 
 export function useHistory(ref: AssetRef | undefined, range: HistoryRange) {
@@ -174,7 +187,9 @@ export function usePortfolio(walletId?: string) {
   const wallets = useWallets();
   const assets = useAssets();
   const transactions = useTransactions();
-  const base = profile.data?.baseCurrency;
+  const display = useDisplayCurrency();
+  const base = display.current;
+  const prefs = profile.data?.fxPreferences;
 
   const assetsById = useMemo(() => new Map((assets.data ?? []).map((a) => [a.id, a])), [assets.data]);
 
@@ -195,15 +210,24 @@ export function usePortfolio(walletId?: string) {
     for (const a of assets.data ?? []) set.add(a.currency);
     for (const q of quotes.data ?? []) set.add(q.currency);
     for (const w of wallets.data ?? []) set.add(w.currency);
-    if (base) set.delete(base);
+    if (base) set.add(base);
+    set.delete('USD');
     return [...set];
   }, [transactions.data, assets.data, quotes.data, wallets.data, base]);
 
-  const fx = useFxRates(base, currencies);
+  const fxSnapshot = useFxSnapshot(prefs);
+  const fxHistory = useFxHistory((transactions.data ?? []).map((t) => t.date), currencies, prefs);
+
+  const fxTable = useMemo(
+    () => new FxTable(fxSnapshot.data?.rates ?? {}, fxHistory.data ?? {}),
+    [fxSnapshot.data, fxHistory.data],
+  );
 
   const result = useMemo(() => {
     if (!base || !transactions.data || !assets.data) return undefined;
-    const fxLookup = fxLookupFrom(base, fx.data);
+    // Costo con el tipo de cambio de la fecha de cada operación; valuación con el actual.
+    const fxHistorical = fxTable.lookup();
+    const fxLookup = fxTable.latestLookup();
 
     const quoteMap = new Map<string, Quote>();
     const byProvider = new Map((quotes.data ?? []).map((q) => [q.assetId, q]));
@@ -213,7 +237,7 @@ export function usePortfolio(walletId?: string) {
     }
 
     const txs: Transaction[] = walletId ? transactions.data.filter((t) => t.walletId === walletId) : transactions.data;
-    const computed = computePositions(txs, { baseCurrency: base, fx: fxLookup });
+    const computed = computePositions(txs, { baseCurrency: base, fx: fxHistorical });
     const ctx = { baseCurrency: base, quotes: quoteMap, fx: fxLookup, assets: assetsById };
     const summary = summarizePortfolio(computed.consolidated, ctx);
 
@@ -238,8 +262,9 @@ export function usePortfolio(walletId?: string) {
       byWallet: byWalletValued,
       quoteMap,
       fxLookup,
+      fxHistorical,
     };
-  }, [base, transactions.data, assets.data, quotes.data, fx.data, walletId, assetsById]);
+  }, [base, transactions.data, assets.data, quotes.data, fxTable, walletId, assetsById]);
 
   const isLoading = profile.isLoading || wallets.isLoading || assets.isLoading || transactions.isLoading;
   const isError = profile.isError || wallets.isError || assets.isError || transactions.isError;
@@ -255,6 +280,10 @@ export function usePortfolio(walletId?: string) {
     isLoading,
     isError,
     isFetchingQuotes: quotes.isFetching,
-    refetch: () => Promise.all([quotes.refetch(), fx.refetch(), transactions.refetch(), assets.refetch()]),
+    display,
+    fxTable,
+    fxSnapshot: fxSnapshot.data,
+    prefs,
+    refetch: () => Promise.all([quotes.refetch(), fxSnapshot.refetch(), transactions.refetch(), assets.refetch()]),
   };
 }

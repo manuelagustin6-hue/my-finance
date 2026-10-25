@@ -8,6 +8,7 @@ select gen_random_uuid(), 'A' || g, 'Activo ' || g, 'stock', 'USD', 'mock', 'A' 
 
 do $$ begin
   assert (select count(*) from public.profiles) = 2, 'se crean perfiles al registrarse';
+  assert (select secondary_currency from public.profiles limit 1) = 'USD', 'moneda secundaria por defecto';
 end $$;
 
 -- Usuario 1 opera con RLS
@@ -63,6 +64,7 @@ do $$ begin
   assert (select count(*) from public.transactions) = 0, 'RLS operaciones';
   assert (select count(*) from public.profiles) = 1, 'RLS perfiles';
   assert (select count(*) from public.assets) = 20, 'catálogo global visible';
+  assert (select count(*) from public.fx_cache) = 0, 'caché de cotizaciones no visible para usuarios';
 end $$;
 
 reset role;

@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { AllocationBar } from '@/components/charts';
+import { CurrencyToggle } from '@/components/CurrencyPicker';
 import { PositionRow } from '@/components/PositionRow';
 import {
   Button,
@@ -60,14 +61,20 @@ export default function HomeScreen() {
   }
 
   const totalPnlPct = s.totalCost > 0 ? s.unrealizedPnl / s.totalCost : 0;
+  const other = p.display.options.find((o) => o !== base);
+  const otherRate = other ? p.fxTable.rate(base, other) : undefined;
 
   return (
     <Screen refreshing={p.isFetchingQuotes} onRefresh={() => void p.refetch()}>
+      <CurrencyToggle options={p.display.options} value={base} onChange={p.display.set} />
       <Card style={{ gap: spacing.md }}>
         <Text muted variant="label">
           {t('home.totalValue')}
         </Text>
         <Text variant="title">{f.money(s.totalValue, base)}</Text>
+        {other && otherRate !== undefined ? (
+          <Text muted>{t('fx.equivalent', { value: f.money(s.totalValue * otherRate, other) })}</Text>
+        ) : null}
         <Row gap={spacing.lg}>
           <Text color={f.tone(s.dayChange)} variant="label">
             {t('home.today')}: {f.signedMoney(s.dayChange, base)} ({f.pct(s.dayChangePct)})
@@ -138,6 +145,16 @@ export default function HomeScreen() {
           {plan === 'free' ? <ProBadge /> : null}
         </Row>
         <Text muted>{t('home.analyticsBody')}</Text>
+      </Card>
+
+      <Card onPress={() => router.push('/fx')}>
+        <Row style={{ justifyContent: 'space-between' }}>
+          <Text variant="heading">{t('fx.title')}</Text>
+          {p.fxSnapshot && p.base !== 'USD' && p.fxSnapshot.rates[base] ? (
+            <Text muted>{t('fx.perUsd', { value: f.money(p.fxSnapshot.rates[base]!, base) })}</Text>
+          ) : null}
+        </Row>
+        <Text muted>{t('fx.subtitle')}</Text>
       </Card>
 
       {isDemoMode ? <Notice text={t('common.simulatedData')} /> : null}

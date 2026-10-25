@@ -1,4 +1,4 @@
-import type { Asset, AssetSearchResult, Transaction, Wallet } from '@my-finance/core';
+import type { Asset, AssetSearchResult, FxPreferences, Transaction, Wallet } from '@my-finance/core';
 import { getSupabase } from '@/lib/supabase';
 import type { RemoteMarketClient } from './market';
 import {
@@ -130,6 +130,8 @@ export class SupabaseRepository implements Repository {
     return {
       displayName: optStr(row.display_name),
       baseCurrency: String(row.base_currency),
+      secondaryCurrency: String(row.secondary_currency ?? 'USD'),
+      fxPreferences: (row.fx_preferences ?? {}) as FxPreferences,
       locale: String(row.locale),
       onboarded: Boolean(row.onboarded),
     };
@@ -140,6 +142,8 @@ export class SupabaseRepository implements Repository {
     const update: Row = {};
     if (patch.displayName !== undefined) update.display_name = patch.displayName;
     if (patch.baseCurrency !== undefined) update.base_currency = patch.baseCurrency;
+    if (patch.secondaryCurrency !== undefined) update.secondary_currency = patch.secondaryCurrency;
+    if (patch.fxPreferences !== undefined) update.fx_preferences = patch.fxPreferences;
     if (patch.locale !== undefined) update.locale = patch.locale;
     if (patch.onboarded !== undefined) update.onboarded = patch.onboarded;
     check(await this.db.from('profiles').update(update).eq('id', id));

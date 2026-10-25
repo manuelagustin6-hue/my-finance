@@ -1,6 +1,12 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   hasFeature,
   MockMarketDataProvider,
+  PublicFxProvider,
+  type FxCache,
+  type FxPreferences,
+  type FxSnapshot,
+  type UsdRates,
   PLANS,
   RANGE_DAYS,
   type AssetRef,
@@ -27,13 +33,23 @@ export interface MarketClient {
   quotes(assets: AssetRef[]): Promise<Quote[]>;
   history(asset: AssetRef, range: HistoryRange): Promise<PricePoint[]>;
   fundamentals(asset: AssetRef): Promise<Fundamentals | null>;
-  /** Cuántas unidades de `base` vale 1 unidad de cada moneda. */
-  fx(base: string, currencies: string[]): Promise<Record<string, number>>;
+  /** Tipos de cambio actuales contra USD (con el dólar elegido para ARS y VES). */
+  fxLatest(prefs: FxPreferences): Promise<FxSnapshot>;
+  /** Tipos de cambio contra USD en fechas pasadas. */
+  fxOn(dates: string[], currencies: string[], prefs: FxPreferences): Promise<Record<string, UsdRates>>;
 }
+
+/** Caché local de cotizaciones (las de días pasados no cambian). */
+const deviceFxCache: FxCache = {
+  get: (key) => AsyncStorage.getItem(`my-finance:${key}`),
+  set: (key, value) => AsyncStorage.setItem(`my-finance:${key}`, value),
+};
 
 /** Cliente local con datos simulados (modo demo). Aplica los mismos límites que el servidor. */
 export class LocalMarketClient implements MarketClient {
   private readonly provider = new MockMarketDataProvider();
+  /** Los tipos de cambio son reales también en modo demo: las fuentes son públicas y gratuitas. */
+  private readonly fx = new PublicFxProvider(undefined, deviceFxCache);
 
   constructor(private readonly plan: () => PlanId) {}
 
@@ -57,8 +73,12 @@ export class LocalMarketClient implements MarketClient {
     return this.provider.getFundamentals(asset);
   }
 
-  fx(base: string, currencies: string[]) {
-    return this.provider.getFxRates(base, currencies);
+  fxLatest(prefs: FxPreferences) {
+    return this.fx.latest(prefs);
+  }
+
+  fxOn(dates: string[], currencies: string[], prefs: FxPreferences) {
+    return this.fx.on(dates, currencies, prefs);
   }
 }
 
@@ -94,7 +114,12 @@ export class RemoteMarketClient implements MarketClient {
     return this.call<Fundamentals | null>({ action: 'fundamentals', asset });
   }
 
-  fx(base: string, currencies: string[]) {
-    return this.call<Record<string, number>>({ action: 'fx', base, currencies });
+  fxLatest(prefs: FxPreferences) {
+    return this.call<FxSnapshot>({ action: 'fx_latest', prefs });
+  }
+
+  fxOn(dates: string[], currencies: string[], prefs: FxPreferences) {
+    if (dates.length === 0 || currencies.length === 0) return Promise.resolve({});
+    return this.call<Record<string, UsdRates>>({ action: 'fx_on', dates, currencies, prefs });
   }
 }

@@ -1,5 +1,7 @@
 import {
   dailyDates,
+  FxTable,
+  weeklyDates,
   hasFeature,
   periodStart,
   portfolioRisk,
@@ -12,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { AllocationBar, LineChart } from '@/components/charts';
 import { Card, Loading, Notice, ProGate, Screen, Section, Stat, StatGrid, Text } from '@/components/ui';
 import { isDemoMode, market } from '@/data';
-import { refOf, usePortfolio } from '@/hooks/queries';
+import { refOf, useFxHistory, usePortfolio } from '@/hooks/queries';
 import { useFormat } from '@/hooks/useFormat';
 import { numberLocale } from '@/i18n';
 import { usePlan } from '@/state/app';
@@ -48,8 +50,22 @@ export default function AnalyticsScreen() {
   });
   const historiesLoading = histories.some((h) => h.isLoading);
 
+  // Tipos de cambio semanales del período para valuar la serie en la moneda elegida.
+  const today = new Date().toISOString().slice(0, 10);
+  const yearAgo = periodStart('1Y', new Date())!;
+  const fxCurrencies = useMemo(
+    () => [...new Set([...p.assets.map((a) => a.currency), ...p.transactions.map((tx) => tx.currency), p.base ?? 'USD'])],
+    [p.assets, p.transactions, p.base],
+  );
+  const fxDates = useMemo(
+    () => [...weeklyDates(yearAgo, today), ...p.transactions.map((tx) => tx.date.slice(0, 10))],
+    [yearAgo, today, p.transactions],
+  );
+  const fxHistory = useFxHistory(allowed ? fxDates : [], fxCurrencies, p.prefs);
+
   const analysis = useMemo(() => {
-    if (!allowed || !p.base || !p.fxLookup || historiesLoading || p.transactions.length === 0) return undefined;
+    if (!allowed || !p.base || historiesLoading || fxHistory.isLoading || p.transactions.length === 0) return undefined;
+    const fxTable = new FxTable(p.fxSnapshot?.rates ?? {}, fxHistory.data ?? {});
     const map = new Map<string, readonly PricePoint[]>();
     held.forEach((a, i) => {
       const data = histories[i]?.data;
@@ -59,20 +75,18 @@ export default function AnalyticsScreen() {
     for (const a of p.assets) {
       if (!a.providerId && a.manualPrice !== undefined) map.set(a.id, [{ date: '1900-01-01', close: a.manualPrice }]);
     }
-    const today = new Date();
-    const yearAgo = periodStart('1Y', today)!;
-    const first = p.transactions.reduce((min, tx) => (tx.date < min ? tx.date : min), today.toISOString()).slice(0, 10);
-    const dates = dailyDates(first > yearAgo ? first : yearAgo, today.toISOString());
+    const first = p.transactions.reduce((min, tx) => (tx.date < min ? tx.date : min), today).slice(0, 10);
+    const dates = dailyDates(first > yearAgo ? first : yearAgo, today);
     const points = portfolioSeries({
       transactions: p.transactions,
       histories: map,
       currencies: new Map(p.assets.map((a) => [a.id, a.currency])),
       baseCurrency: p.base,
-      fx: p.fxLookup,
+      fx: fxTable.lookup(),
       dates,
     });
     return { points, risk: portfolioRisk(points) };
-  }, [allowed, p.base, p.fxLookup, p.transactions, p.assets, held, histories, historiesLoading]);
+  }, [allowed, p.base, p.fxSnapshot, fxHistory.data, fxHistory.isLoading, p.transactions, p.assets, held, histories, historiesLoading, today, yearAgo]);
 
   if (!allowed) {
     return (
@@ -81,7 +95,7 @@ export default function AnalyticsScreen() {
       </Screen>
     );
   }
-  if (p.isLoading || historiesLoading) return <Screen><Loading /></Screen>;
+  if (p.isLoading || historiesLoading || fxHistory.isLoading) return <Screen><Loading /></Screen>;
 
   const base = p.base ?? 'USD';
   const s = p.summary;
