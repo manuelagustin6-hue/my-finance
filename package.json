@@ -1,0 +1,11 @@
+{
+  "name": "my-finance",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "mobile": "pnpm --filter mobile start"
+  }
+}
