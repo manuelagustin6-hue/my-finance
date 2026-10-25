@@ -145,7 +145,7 @@ describe('Interactive Brokers', () => {
 
 describe('formato desconocido y duplicados', () => {
   it('informa que no reconoce el archivo', () => {
-    expect(importCsv('foo,bar\n1,2').errors[0]!.message).toMatch(/No se reconoció/);
+    expect(importCsv('foo,bar\n1,2').errors[0]!.message).toMatch(/No se encontraron columnas/);
   });
 
   it('genera la misma huella para la misma operación', () => {

@@ -47,6 +47,12 @@ export interface PositionWarning {
 export interface ComputePositionsOptions {
   baseCurrency: CurrencyCode;
   fx?: FxLookup;
+  /**
+   * Moneda de cotización de cada activo. Si una operación está en otra moneda (p. ej. un bono
+   * comprado en pesos y vendido en dólares), sus montos se convierten a la moneda del activo
+   * con el tipo de cambio de su fecha. Sin esto se usa la moneda de la primera operación.
+   */
+  assetCurrency?: (assetId: string) => CurrencyCode | undefined;
 }
 
 export interface ComputePositionsResult {
@@ -79,12 +85,42 @@ function emptyPosition(assetId: string, walletId: string | null, currency: Curre
   };
 }
 
-/** Ordena por fecha manteniendo el orden original en operaciones del mismo instante. */
-export function sortTransactions<T extends Pick<Transaction, 'date'>>(transactions: readonly T[]): T[] {
+const INFLOWS: ReadonlySet<string> = new Set(['buy', 'deposit', 'transfer_in']);
+
+/**
+ * Ordena por fecha. En operaciones del mismo instante (por ejemplo, del mismo día cuando el
+ * archivo no trae hora) procesa primero los ingresos de unidades y luego las salidas: así una
+ * compra y venta del mismo día (operatoria MEP) no genera una venta sin tenencia. A igualdad,
+ * respeta el orden original.
+ */
+export function sortTransactions<T extends Pick<Transaction, 'date'> & { type?: string }>(transactions: readonly T[]): T[] {
+  const rank = (tx: T) => (tx.type && INFLOWS.has(tx.type) ? 0 : 1);
   return transactions
     .map((tx, index) => ({ tx, index }))
-    .sort((a, b) => (a.tx.date < b.tx.date ? -1 : a.tx.date > b.tx.date ? 1 : a.index - b.index))
+    .sort((a, b) =>
+      a.tx.date < b.tx.date ? -1 : a.tx.date > b.tx.date ? 1 : rank(a.tx) - rank(b.tx) || a.index - b.index,
+    )
     .map(({ tx }) => tx);
+}
+
+/**
+ * Activos que se venden o retiran por más de lo que se compró en el conjunto de operaciones
+ * (típico cuando el archivo no incluye la historia completa). Devuelve símbolo → faltante.
+ */
+export function missingHoldings<T extends Pick<Transaction, 'date' | 'type' | 'quantity'> & { key: string }>(
+  rows: readonly T[],
+): Map<string, number> {
+  const held = new Map<string, number>();
+  const missing = new Map<string, number>();
+  for (const row of sortTransactions(rows)) {
+    const q = held.get(row.key) ?? 0;
+    if (INFLOWS.has(row.type)) held.set(row.key, q + row.quantity);
+    else if (row.type === 'sell' || row.type === 'withdraw' || row.type === 'transfer_out') {
+      if (row.quantity > q + 1e-9) missing.set(row.key, (missing.get(row.key) ?? 0) + row.quantity - q);
+      held.set(row.key, Math.max(0, q - row.quantity));
+    } else if (row.type === 'split') held.set(row.key, q * row.quantity);
+  }
+  return missing;
 }
 
 function resolveFx(
@@ -108,11 +144,35 @@ function resolveFx(
   return 1;
 }
 
-/** Aplica una operación sobre una posición (muta la posición). */
+/** Factor para pasar montos de la moneda de la operación a la moneda de la posición. */
+function resolveConversion(
+  tx: Transaction,
+  pos: Position,
+  options: ComputePositionsOptions,
+  warnings: PositionWarning[],
+): number {
+  if (tx.currency === pos.currency) return 1;
+  const rate = options.fx?.(tx.currency, pos.currency, tx.date);
+  if (rate !== undefined && rate > 0) return rate;
+  warnings.push({
+    code: 'currency_mismatch',
+    transactionId: tx.id,
+    assetId: tx.assetId,
+    walletId: tx.walletId,
+    message: `La operación está en ${tx.currency} y el activo en ${pos.currency}, sin tipo de cambio para ${tx.date}.`,
+  });
+  return 1;
+}
+
+/**
+ * Aplica una operación sobre una posición (muta la posición).
+ * `fx` convierte a moneda base; `conv` convierte a la moneda de la posición.
+ */
 function applyTransaction(
   pos: Position,
   tx: Transaction,
   fx: number,
+  conv: number,
   warnings: PositionWarning[],
 ): void {
   const fee = Math.max(0, tx.fee || 0);
@@ -122,13 +182,6 @@ function applyTransaction(
 
   const warn = (code: PositionWarningCode, message: string) =>
     warnings.push({ code, transactionId: tx.id, assetId: tx.assetId, walletId: tx.walletId, message });
-
-  if (tx.currency !== pos.currency && pos.transactionCount > 1) {
-    warn(
-      'currency_mismatch',
-      `La operación está en ${tx.currency} pero el activo se registró en ${pos.currency}.`,
-    );
-  }
 
   switch (tx.type) {
     case 'buy':
@@ -140,12 +193,12 @@ function applyTransaction(
       }
       const cost = tx.quantity * tx.price + fee;
       pos.quantity += tx.quantity;
-      pos.costBasis += cost;
+      pos.costBasis += cost * conv;
       pos.costBasisBase += cost * fx;
-      pos.feesPaid += fee;
+      pos.feesPaid += fee * conv;
       pos.feesPaidBase += fee * fx;
       if (tx.type === 'buy') {
-        pos.totalInvested += cost;
+        pos.totalInvested += cost * conv;
         pos.totalInvestedBase += cost * fx;
       }
       return;
@@ -174,16 +227,16 @@ function applyTransaction(
       pos.quantity -= quantity;
       pos.costBasis -= costOut;
       pos.costBasisBase -= costOutBase;
-      pos.feesPaid += fee;
+      pos.feesPaid += fee * conv;
       pos.feesPaidBase += fee * fx;
 
       if (tx.type === 'sell') {
         const proceeds = quantity * tx.price - fee;
-        pos.realizedPnl += proceeds - costOut;
+        pos.realizedPnl += proceeds * conv - costOut;
         pos.realizedPnlBase += proceeds * fx - costOutBase;
       } else {
         // En retiros y transferencias el costo viaja con las unidades; solo la comisión es pérdida.
-        pos.realizedPnl -= fee;
+        pos.realizedPnl -= fee * conv;
         pos.realizedPnlBase -= fee * fx;
       }
 
@@ -199,18 +252,18 @@ function applyTransaction(
     case 'interest': {
       const amount = tx.amount ?? tx.quantity * tx.price;
       const net = amount - fee;
-      pos.income += net;
+      pos.income += net * conv;
       pos.incomeBase += net * fx;
-      pos.feesPaid += fee;
+      pos.feesPaid += fee * conv;
       pos.feesPaidBase += fee * fx;
       return;
     }
 
     case 'fee': {
       const amount = (tx.amount ?? tx.quantity * tx.price) + fee;
-      pos.realizedPnl -= amount;
+      pos.realizedPnl -= amount * conv;
       pos.realizedPnlBase -= amount * fx;
-      pos.feesPaid += amount;
+      pos.feesPaid += amount * conv;
       pos.feesPaidBase += amount * fx;
       return;
     }
@@ -238,11 +291,11 @@ export function computePositions(
     const key = `${tx.assetId}::${tx.walletId}`;
     let pos = byKey.get(key);
     if (!pos) {
-      pos = emptyPosition(tx.assetId, tx.walletId, tx.currency);
+      pos = emptyPosition(tx.assetId, tx.walletId, options.assetCurrency?.(tx.assetId) ?? tx.currency);
       byKey.set(key, pos);
     }
     const fx = resolveFx(tx, options, warnings);
-    applyTransaction(pos, tx, fx, warnings);
+    applyTransaction(pos, tx, fx, resolveConversion(tx, pos, options, warnings), warnings);
   }
 
   const byWallet = [...byKey.values()];

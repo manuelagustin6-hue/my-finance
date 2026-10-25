@@ -1,5 +1,6 @@
 import type { AssetType, CurrencyCode, TransactionType } from '../types.ts';
 import { isBlankRow, parseCsv, parseDate, parseNumber, rowsToRecords } from './parse.ts';
+import { applySmartMapping, detectSmartMapping, type RowAction, type SmartImportResult } from './smart.ts';
 
 /** Fila normalizada de una importación, previa a vincularla con un activo del catálogo. */
 export interface ImportedRow {
@@ -16,6 +17,8 @@ export interface ImportedRow {
   currency: CurrencyCode;
   externalId?: string;
   note?: string;
+  /** Nombre o descripción del instrumento, si el archivo la trae. */
+  name?: string;
 }
 
 export interface ImportIssue {
@@ -30,7 +33,7 @@ export interface ImportResult {
   warnings: ImportIssue[];
 }
 
-export type TemplateId = 'generic' | 'binance' | 'coinbase' | 'ibkr';
+export type TemplateId = 'generic' | 'binance' | 'coinbase' | 'ibkr' | 'smart';
 
 export interface ImportTemplate {
   id: TemplateId;
@@ -432,19 +435,43 @@ export function detectTemplate(rows: string[][]): ImportTemplate | undefined {
   return undefined;
 }
 
-/** Interpreta un archivo CSV con la plantilla indicada o detectándola automáticamente. */
-export function importCsv(text: string, templateId?: TemplateId): ImportResult {
+export interface ImportOptions {
+  /** Acción elegida por el usuario para cada tipo de operación (importador inteligente). */
+  actions?: Record<string, RowAction>;
+  /** Moneda a usar si el archivo no la indica (normalmente la de la billetera). */
+  defaultCurrency?: string;
+}
+
+/**
+ * Interpreta un archivo CSV: usa la plantilla indicada, una conocida si coincide
+ * (Binance, Coinbase, IBKR, plantilla de la app) o, si no, el importador inteligente.
+ */
+export function importCsv(text: string, templateId?: TemplateId, options: ImportOptions = {}): ImportResult | SmartImportResult {
   const rows = parseCsv(text);
-  const template = templateId ? IMPORT_TEMPLATES.find((t) => t.id === templateId) : detectTemplate(rows);
-  if (!template) {
+  const template =
+    templateId && templateId !== 'smart' ? IMPORT_TEMPLATES.find((t) => t.id === templateId) : templateId ? undefined : detectTemplate(rows);
+  if (template) return template.parse(rows);
+
+  const mapping = detectSmartMapping(rows);
+  if (!mapping) {
     return {
-      templateId: 'generic',
+      templateId: 'smart',
       rows: [],
-      errors: [{ line: 1, message: 'No se reconoció el formato del archivo. Usá la plantilla de la app.' }],
+      errors: [
+        {
+          line: 1,
+          message: 'No se encontraron columnas de fecha, operación y activo. Revisa que el archivo tenga encabezados.',
+        },
+      ],
       warnings: [],
     };
   }
-  return template.parse(rows);
+  mapping.actions = options.actions ?? {};
+  return applySmartMapping(rows, mapping, options.defaultCurrency);
+}
+
+export function isSmartResult(result: ImportResult): result is SmartImportResult {
+  return result.templateId === 'smart' && 'mapping' in result;
 }
 
 /** Huella para detectar operaciones duplicadas entre importaciones. */

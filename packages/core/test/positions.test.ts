@@ -133,6 +133,39 @@ describe('computePositions', () => {
     expect(warnings[0]?.code).toBe('missing_fx');
   });
 
+  it('convierte a la moneda del activo las operaciones en otra moneda (operatoria MEP)', () => {
+    // AL30 cotiza en USD: se compra en pesos y se vende en dólares.
+    const rates: Record<string, number> = { '2025-01-10': 1000, '2025-02-10': 1100 };
+    const fx = (from: string, to: string, date?: string) => {
+      const ars = rates[date?.slice(0, 10) ?? ''] ?? 1200;
+      if (from === 'ARS' && to === 'USD') return 1 / ars;
+      if (from === 'USD' && to === 'ARS') return ars;
+      return from === to ? 1 : undefined;
+    };
+    const { consolidated, warnings } = computePositions(
+      [
+        tx({ type: 'buy', assetId: 'AL30', date: '2025-01-10', quantity: 100, price: 650, fee: 0, currency: 'ARS' }),
+        tx({ type: 'sell', assetId: 'AL30', date: '2025-02-10', quantity: 50, price: 0.7, fee: 0, currency: 'USD' }),
+      ],
+      { baseCurrency: 'USD', fx, assetCurrency: () => 'USD' },
+    );
+    expect(warnings).toEqual([]);
+    const p = consolidated[0]!;
+    expect(p.currency).toBe('USD');
+    expect(p.costBasis).toBeCloseTo(32.5); // 65.000 ARS / 1.000 = 65 USD, quedan la mitad
+    expect(p.realizedPnl).toBeCloseTo(2.5); // 35 USD − 32,5 USD
+  });
+
+  it('advierte si no puede convertir entre monedas', () => {
+    const { warnings } = computePositions(
+      [
+        tx({ type: 'buy', assetId: 'X', date: '2025-01-10', quantity: 1, price: 10, currency: 'ARS' }),
+      ],
+      { baseCurrency: 'ARS', assetCurrency: () => 'USD' },
+    );
+    expect(warnings.map((w) => w.code)).toContain('currency_mismatch');
+  });
+
   it('aplica splits sin cambiar el costo total', () => {
     const { consolidated } = computePositions(
       [

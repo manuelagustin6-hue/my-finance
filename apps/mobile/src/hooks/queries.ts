@@ -237,7 +237,11 @@ export function usePortfolio(walletId?: string) {
     }
 
     const txs: Transaction[] = walletId ? transactions.data.filter((t) => t.walletId === walletId) : transactions.data;
-    const computed = computePositions(txs, { baseCurrency: base, fx: fxHistorical });
+    const computed = computePositions(txs, {
+      baseCurrency: base,
+      fx: fxHistorical,
+      assetCurrency: (id) => assetsById.get(id)?.currency,
+    });
     const ctx = { baseCurrency: base, quotes: quoteMap, fx: fxLookup, assets: assetsById };
     const summary = summarizePortfolio(computed.consolidated, ctx);
 
