@@ -22,7 +22,6 @@ import {
   StatGrid,
   Text,
 } from '@/components/ui';
-import { isDemoMode } from '@/data';
 import { usePortfolio } from '@/hooks/queries';
 import { useFormat } from '@/hooks/useFormat';
 import { usePlan } from '@/state/app';
@@ -57,7 +56,7 @@ export default function HomeScreen() {
             )}
           </View>
         </EmptyState>
-        {isDemoMode ? <Notice text={t('common.simulatedData')} /> : null}
+        <Notice text={t('common.priceSources')} />
       </Screen>
     );
   }
@@ -155,7 +154,7 @@ export default function HomeScreen() {
         <Text muted>{t('fx.subtitle')}</Text>
       </Card>
 
-      {isDemoMode ? <Notice text={t('common.simulatedData')} /> : null}
+      <Notice text={t('common.priceSources')} />
       <Text variant="caption" muted align="center" color={c.muted}>
         {t('settings.disclaimer')}
       </Text>

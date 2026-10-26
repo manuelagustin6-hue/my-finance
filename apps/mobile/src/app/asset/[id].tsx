@@ -1,4 +1,5 @@
 import {
+  providerSearchTerm,
   assetStats,
   averageCost,
   hasFeature,
@@ -35,7 +36,7 @@ import {
   StatGrid,
   Text,
 } from '@/components/ui';
-import { isDemoMode, market, repository } from '@/data';
+import { market, repository } from '@/data';
 import { keys, refOf, useFundamentals, useHistory, usePortfolio } from '@/hooks/queries';
 import { useFormat } from '@/hooks/useFormat';
 import { parseAssetParam } from '@/lib/routes';
@@ -61,7 +62,7 @@ function useAssetInfo(param: string) {
     queryKey: ['asset-info', providerRef?.type, providerRef?.providerId],
     enabled: !!providerRef && !owned,
     queryFn: async (): Promise<AssetSearchResult | null> => {
-      const results = await market.search(providerRef!.providerId);
+      const results = await market.search(providerSearchTerm(providerRef!.providerId));
       return results.find((r) => r.providerId === providerRef!.providerId && r.type === providerRef!.type) ?? null;
     },
   });
@@ -294,7 +295,7 @@ export default function AssetScreen() {
         </Section>
       ) : null}
 
-      {isDemoMode ? <Notice text={t('common.simulatedData')} /> : null}
+      <Notice text={t('common.priceSources')} />
     </Screen>
   );
 }

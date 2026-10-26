@@ -13,7 +13,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AllocationBar, LineChart } from '@/components/charts';
 import { Card, Loading, Notice, ProGate, Screen, Section, Stat, StatGrid, Text } from '@/components/ui';
-import { isDemoMode, market } from '@/data';
+import { market } from '@/data';
 import { refOf, useFxHistory, usePortfolio } from '@/hooks/queries';
 import { useFormat } from '@/hooks/useFormat';
 import { numberLocale } from '@/i18n';
@@ -179,7 +179,7 @@ export default function AnalyticsScreen() {
         </>
       ) : null}
 
-      {isDemoMode ? <Notice text={t('common.simulatedData')} /> : null}
+      <Notice text={t('common.priceSources')} />
     </Screen>
   );
 }

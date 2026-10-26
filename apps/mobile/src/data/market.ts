@@ -1,7 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
+  CoinGeckoProvider,
+  Data912Provider,
   hasFeature,
-  MockMarketDataProvider,
+  PrefixRouterProvider,
   PublicFxProvider,
   type FxCache,
   type FxPreferences,
@@ -41,15 +43,21 @@ export interface MarketClient {
   fxOn(dates: string[], currencies: string[], prefs: FxPreferences): Promise<Record<string, UsdRates>>;
 }
 
-/** Caché local de cotizaciones (las de días pasados no cambian). */
+/** Caché local de cotizaciones y precios (en AsyncStorage). */
 const deviceFxCache: FxCache = {
   get: (key) => AsyncStorage.getItem(`my-finance:${key}`),
   set: (key, value) => AsyncStorage.setItem(`my-finance:${key}`, value),
 };
 
-/** Cliente local con datos simulados (modo demo). Aplica los mismos límites que el servidor. */
+/**
+ * Cliente local (modo demo): consulta desde el teléfono fuentes públicas sin clave —data912 para
+ * BYMA y EE. UU., CoinGecko para cripto— con caché en el dispositivo. Aplica los mismos límites que el servidor.
+ */
 export class LocalMarketClient implements MarketClient {
-  private readonly provider = new MockMarketDataProvider();
+  private readonly provider = new PrefixRouterProvider([
+    new Data912Provider(undefined, deviceFxCache),
+    new CoinGeckoProvider(undefined, deviceFxCache),
+  ]);
   /** Los tipos de cambio son reales también en modo demo: las fuentes son públicas y gratuitas. */
   private readonly fx = new PublicFxProvider(undefined, deviceFxCache);
 

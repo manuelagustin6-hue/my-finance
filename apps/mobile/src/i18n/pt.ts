@@ -17,7 +17,7 @@ const pt: Translation = {
     pro: 'Pro',
     free: 'Grátis',
     all: 'Todas',
-    simulatedData: 'Dados simulados para desenvolvimento: não são cotações reais.',
+    priceSources: 'Preços com atraso: data912 (BYMA e EUA) e dados da CoinGecko (cripto). Versão beta: alguns ativos podem não ter histórico.',
     noData: 'Sem dados',
     seeAll: 'Ver tudo',
     yes: 'Sim',

@@ -64,7 +64,8 @@ scripts/            Utilidades (pruebas de base de datos, sincronización del n�
 
 ## Modos de funcionamiento
 
-- **Modo demo** (sin variables de entorno): los datos se guardan en el dispositivo y las cotizaciones son **simuladas** (catálogo de ~50 activos de EE. UU., Argentina, Brasil, México, Chile, Colombia, Europa y Japón). Desde Ajustes se puede simular el plan Pro.
+- **Modo demo** (sin variables de entorno): los datos se guardan en el dispositivo y las cotizaciones son **reales, con demora**, consultadas desde el teléfono a fuentes públicas sin clave: data912 (BYMA —acciones, CEDEARs, bonos, letras, ONs— y acciones/ADRs de EE. UU.) y CoinGecko (cripto). Desde Ajustes se puede simular el plan Pro.
+- **Fuentes de precios (beta)**: data912 se declara educativo y sin garantía, y la API pública de CoinGecko exige mención de la fuente; antes del lanzamiento pago hay que contratar licencias comerciales (p. ej. FMP, CoinGecko, BYMA). Limitaciones actuales: sin historial de acciones de EE. UU. ni balances de empresas. Los proveedores viven en `packages/core/src/market/` y se enrutan por el prefijo del id (`ar:`, `us:`, `cg:`).
 - **Modo nube**: con un proyecto de Supabase configurado, cada usuario tiene su cuenta y sus datos sincronizados entre dispositivos.
 
 > Los proveedores reales de datos de mercado todavía no están definidos. Todo pasa por la interfaz `MarketDataProvider` (`packages/core/src/market/provider.ts`); para sumar uno se implementa esa interfaz y se registra en `buildProvider()` dentro de `supabase/functions/market/index.ts`. La app no necesita cambios.

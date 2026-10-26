@@ -110,13 +110,16 @@ export default function ImportScreen() {
     for (const row of rows) {
       const key = keyOf(row);
       if (map.has(key)) continue;
-      const owned = p.assets.find((a) => a.symbol.toUpperCase() === row.symbol && (!row.assetType || a.type === row.assetType));
+      const ownedMatches = p.assets.filter((a) => a.symbol.toUpperCase() === row.symbol && (!row.assetType || a.type === row.assetType));
+      const owned = ownedMatches.find((a) => a.currency === row.currency) ?? ownedMatches[0];
       if (owned) {
         map.set(key, { kind: 'owned', asset: owned });
         continue;
       }
       const results = await market.search(row.symbol).catch(() => [] as AssetSearchResult[]);
-      const match = results.find((r) => r.symbol.toUpperCase() === row.symbol && (!row.assetType || r.type === row.assetType));
+      const candidates = results.filter((r) => r.symbol.toUpperCase() === row.symbol && (!row.assetType || r.type === row.assetType));
+      // El mismo símbolo puede ser un CEDEAR en pesos y la acción en dólares: se prefiere la moneda de la fila.
+      const match = candidates.find((r) => r.currency === row.currency) ?? candidates[0];
       map.set(
         key,
         match

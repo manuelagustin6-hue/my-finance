@@ -15,7 +15,7 @@ const es = {
     pro: 'Pro',
     free: 'Gratis',
     all: 'Todas',
-    simulatedData: 'Datos simulados para desarrollo: no son cotizaciones reales.',
+    priceSources: 'Precios con demora: data912 (BYMA y EE. UU.) y datos de CoinGecko (cripto). Versión beta: algunas especies pueden no tener historial.',
     noData: 'Sin datos',
     seeAll: 'Ver todo',
     yes: 'Sí',

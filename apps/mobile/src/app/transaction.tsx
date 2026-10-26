@@ -1,4 +1,5 @@
 import {
+  providerSearchTerm,
   AMOUNT_TYPES,
   calculateFee,
   canAddAsset,
@@ -96,7 +97,7 @@ function TransactionForm({ params }: { params: Params }) {
   useEffect(() => {
     const pending = initial.pendingProvider;
     if (!pending) return;
-    void market.search(pending.providerId).then((results) => {
+    void market.search(providerSearchTerm(pending.providerId)).then((results) => {
       const match = results.find((r) => r.providerId === pending.providerId && r.type === pending.type);
       if (match) {
         setSelected({ kind: 'search', result: match });

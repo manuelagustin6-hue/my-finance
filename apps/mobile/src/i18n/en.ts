@@ -17,7 +17,7 @@ const en: Translation = {
     pro: 'Pro',
     free: 'Free',
     all: 'All',
-    simulatedData: 'Simulated development data: these are not real market prices.',
+    priceSources: 'Delayed prices: data912 (BYMA and US) and data from CoinGecko (crypto). Beta version: some assets may have no price history.',
     noData: 'No data',
     seeAll: 'See all',
     yes: 'Yes',

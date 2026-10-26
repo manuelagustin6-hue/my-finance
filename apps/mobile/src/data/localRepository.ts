@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
+  legacyProviderId,
   canAddAsset,
   canAddWallet,
   canImport,
@@ -54,6 +55,11 @@ export class LocalRepository implements Repository {
       this.cache = raw ? { ...emptyDb(), ...(JSON.parse(raw) as Partial<LocalDb>) } : emptyDb();
     } catch {
       this.cache = emptyDb();
+    }
+    // Los activos creados con los precios simulados pasan a los proveedores reales (se guarda en la próxima escritura).
+    for (const asset of this.cache.assets) {
+      const id = legacyProviderId(asset);
+      if (id) asset.providerId = id;
     }
     return this.cache;
   }
@@ -125,6 +131,7 @@ export class LocalRepository implements Repository {
         exchange: result.exchange,
         country: result.country,
         providerId: result.providerId,
+        logoUrl: result.logoUrl,
       };
       db.assets.push(asset);
       return asset;

@@ -1,17 +1,26 @@
-import { MOCK_CATALOG, type AssetSearchResult } from '@my-finance/core';
+import type { AssetSearchResult } from '@my-finance/core';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { AssetLogo } from '@/components/AssetLogo';
 import { Button, Card, Divider, Field, ListItem, Loading, Notice, Screen, Section, Text } from '@/components/ui';
-import { isDemoMode } from '@/data';
 import { useQuotes, useSearch } from '@/hooks/queries';
 import { useFormat } from '@/hooks/useFormat';
 import { searchResultHref } from '@/lib/routes';
 import { spacing } from '@/theme';
 
-const POPULAR = ['BTC', 'ETH', 'AAPL', 'NVDA', 'SPY', 'MELI', 'GGAL', 'PETR4', 'AL30', 'SAP'];
+/** Activos populares que se muestran antes de buscar (ids de los proveedores reales). */
+const POPULAR: readonly AssetSearchResult[] = [
+  { providerId: 'cg:bitcoin', symbol: 'BTC', name: 'Bitcoin', type: 'crypto', currency: 'USD' },
+  { providerId: 'cg:ethereum', symbol: 'ETH', name: 'Ethereum', type: 'crypto', currency: 'USD' },
+  { providerId: 'us:AAPL', symbol: 'AAPL', name: 'Apple Inc.', type: 'stock', currency: 'USD', exchange: 'US', country: 'US' },
+  { providerId: 'us:NVDA', symbol: 'NVDA', name: 'NVIDIA Corp.', type: 'stock', currency: 'USD', exchange: 'US', country: 'US' },
+  { providerId: 'ar:GGAL', symbol: 'GGAL', name: 'Grupo Financiero Galicia', type: 'stock', currency: 'ARS', exchange: 'BYMA', country: 'AR' },
+  { providerId: 'ar:YPFD', symbol: 'YPFD', name: 'YPF S.A.', type: 'stock', currency: 'ARS', exchange: 'BYMA', country: 'AR' },
+  { providerId: 'ar:MELI', symbol: 'MELI', name: 'CEDEAR MercadoLibre', type: 'stock', currency: 'ARS', exchange: 'BYMA', country: 'AR' },
+  { providerId: 'ar:AL30', symbol: 'AL30', name: 'Bono Rep. Argentina 2030 (Ley local)', type: 'bond', currency: 'ARS', exchange: 'BYMA', country: 'AR' },
+];
 
 function useDebounced<T>(value: T, delay = 300): T {
   const [debounced, setDebounced] = useState(value);
@@ -57,11 +66,7 @@ export default function MarketScreen() {
   const debounced = useDebounced(query);
   const search = useSearch(debounced);
 
-  const popular: AssetSearchResult[] = isDemoMode
-    ? POPULAR.map((symbol) => MOCK_CATALOG.find((e) => e.symbol === symbol)!)
-        .filter(Boolean)
-        .map((e) => ({ providerId: e.symbol, symbol: e.symbol, name: e.name, type: e.type, currency: e.currency, exchange: e.exchange, country: e.country }))
-    : [];
+  const popular = [...POPULAR];
 
   return (
     <Screen>
@@ -92,7 +97,7 @@ export default function MarketScreen() {
         <ResultList results={search.data!} />
       )}
       <Button title={t('market.customAsset')} variant="ghost" onPress={() => router.push('/custom-asset')} />
-      {isDemoMode ? <Notice text={t('common.simulatedData')} /> : null}
+      <Notice text={t('common.priceSources')} />
     </Screen>
   );
 }

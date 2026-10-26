@@ -2,7 +2,7 @@
 
 La app se publica desde GitHub y se abre con **Expo Go**, una app gratuita. No hace falta computadora ni cuenta de Apple Developer. Todo se hace desde el celular, una sola vez (unos 10 minutos).
 
-La versión que se prueba es el **modo demo**: tus datos quedan guardados en el teléfono, los precios de los activos son simulados y los tipos de cambio son reales. El plan Pro se puede activar gratis desde *Ajustes → Simular plan Pro*.
+La versión que se prueba es el **modo demo**: tus datos quedan guardados en el teléfono, los precios de los activos y los tipos de cambio son reales (con unos minutos de demora; fuentes: data912 y CoinGecko). El plan Pro se puede activar gratis desde *Ajustes → Simular plan Pro*.
 
 ## 1. Instalar Expo Go
 

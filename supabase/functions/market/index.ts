@@ -4,7 +4,10 @@ import {
   canViewHistory,
   pointAtOrBefore,
   hasFeature,
-  MockMarketDataProvider,
+  CoinGeckoProvider,
+  Data912Provider,
+  PrefixRouterProvider,
+  providerSearchTerm,
   PublicFxProvider,
   type FxCache,
   type FxPreferences,
@@ -18,16 +21,6 @@ import { adminClient, corsHeaders, json, requireUser } from '../_shared/supabase
 
 const QUOTE_TTL_SECONDS = 60;
 
-/**
- * Proveedor activo. Cuando se elijan los proveedores reales, se combinan aquí con
- * CompositeProvider (p. ej. uno para cripto y otro para acciones) según las claves configuradas.
- */
-function buildProvider(): MarketDataProvider {
-  return new MockMarketDataProvider();
-}
-
-const provider = buildProvider();
-
 /** Caché de cotizaciones en Postgres, compartida entre todos los usuarios. */
 const fxCache: FxCache = {
   async get(key) {
@@ -40,6 +33,17 @@ const fxCache: FxCache = {
 };
 
 const fx = new PublicFxProvider(undefined, fxCache);
+
+/**
+ * Proveedores activos, enrutados por el prefijo del id: data912 (BYMA y EE. UU.) y CoinGecko (cripto),
+ * ambos públicos y sin clave. Con licencias comerciales (p. ej. FMP) se suman aquí con sus claves.
+ * La caché clave/valor de Postgres se comparte con los tipos de cambio.
+ */
+function buildProvider(): MarketDataProvider {
+  return new PrefixRouterProvider([new Data912Provider(undefined, fxCache), new CoinGeckoProvider(undefined, fxCache)]);
+}
+
+const provider = buildProvider();
 const MAX_FX_DATES = 400;
 
 type Body =
@@ -154,7 +158,7 @@ Deno.serve(async (req) => {
 
       case 'ensure_asset': {
         // Solo el servidor agrega activos al catálogo global, y únicamente si el proveedor los conoce.
-        const match = (await provider.search(body.asset.providerId, 50)).find(
+        const match = (await provider.search(providerSearchTerm(body.asset.providerId), 50)).find(
           (r) => r.providerId === body.asset.providerId && r.type === body.asset.type,
         );
         if (!match) return json({ error: 'ASSET_NOT_FOUND' }, 404);
